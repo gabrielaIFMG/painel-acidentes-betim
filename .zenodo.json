@@ -1,0 +1,13 @@
+{
+  "title": "Painel espacial de acidentes nas rodovias BR-381 e BR-262 em Betim (MG): dados, rotina de análise em R e painel interativo",
+  "upload_type": "software",
+  "description": "Rotina em R e painel interativo para análise descritiva e espacial dos acidentes registrados pela Polícia Rodoviária Federal nas rodovias BR-381 e BR-262, no município de Betim (MG), de 2017 a 2025. Projeto de pesquisa IFMG Campus Betim, Edital 162/2026.",
+  "creators": [
+    {"name": "Jesus, Artur Gonçalves de", "affiliation": "Instituto Federal de Minas Gerais – Campus Betim"},
+    {"name": "Oliveira, Gabriela", "affiliation": "Instituto Federal de Minas Gerais – Campus Betim", "orcid": "https://orcid.org/0000-0002-1294-7723"},
+    {"name": "Silva, Bruno Oliveira da", "affiliation": "Centro Federal de Educação Tecnológica de Minas Gerais – Campus Curvelo", "orcid": "https://orcid.org/0000-0003-1464-0642"}
+  ],
+  "keywords": ["segurança viária", "acidentes de trânsito", "Polícia Rodoviária Federal", "análise espacial", "painel interativo", "BR-381"],
+  "license": "MIT",
+  "language": "por"
+}
