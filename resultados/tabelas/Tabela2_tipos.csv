@@ -1,0 +1,11 @@
+"Tipo de acidente";"Acidentes";"Acidentes fatais";"Mortos";"%";"% dos acidentes fatais";"Mortos por 100 acidentes";"% com vítima grave ou fatal"
+"Colisão traseira/engavetamento";1624;38;42;31;23;2,6;15,6
+"Colisão lateral/transversal";1009;19;21;19,2;11,5;2,1;16,5
+"Tombamento/capotamento";893;16;16;17;9,7;1,8;15,8
+"Colisão com objeto";670;15;15;12,8;9,1;2,2;14,9
+"Saída de pista";325;10;12;6,2;6,1;3,7;16
+"Queda de ocupante";285;5;5;5,4;3;1,8;17,2
+"Atropelamento de pedestre";208;56;58;4;33,9;27,9;64,9
+"Colisão frontal";46;5;10;0,9;3;21,7;45,7
+"Outros";184;1;1;3,5;0,6;0,5;3,8
+"Total";5244;165;180;100;100;3,4;17,6

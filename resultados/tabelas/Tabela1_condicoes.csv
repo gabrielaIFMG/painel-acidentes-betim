@@ -1,0 +1,14 @@
+"Característica";"Categoria";"Acidentes";"%";"Mortos";"Mortos por 100 acidentes"
+"Fase do dia";"Pleno dia";3132;59,7;73;2,3
+"Fase do dia";"Plena noite";1579;30,1;81;5,1
+"Fase do dia";"Amanhecer";251;4,8;15;6
+"Fase do dia";"Anoitecer";282;5,4;11;3,9
+"Condição meteorológica";"Céu claro ou sol";4019;76,6;154;3,8
+"Condição meteorológica";"Chuva ou garoa";513;9,8;10;1,9
+"Condição meteorológica";"Demais condições";712;13,6;16;2,2
+"Tipo de pista";"Dupla";3830;73;136;3,6
+"Tipo de pista";"Múltipla";1244;23,7;41;3,3
+"Tipo de pista";"Simples";170;3,2;3;1,8
+"Uso do solo";"Urbano";3851;73,4;129;3,3
+"Uso do solo";"Rural";1393;26,6;51;3,7
+"Total";"";5244;100;180;3,4

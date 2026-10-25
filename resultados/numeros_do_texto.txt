@@ -1,0 +1,53 @@
+=== NÚMEROS CITADOS NO CAPÍTULO ===
+Acidentes: 5.244 | pessoas envolvidas: 12.569 | veículos: 10.063
+Média anual: 583 | por dia: 1,6
+BR-381: 90,7% | BR-262: 9,2%
+Classificação PRF – com feridos: 82,3% | sem vítimas: 14,5% | fatais: 3,1% (165)
+Mortos no local: 180 | feridos graves: 870 | feridos leves: 5.080 | estado ignorado: 1.340
+Variação de acidentes 2021→2024: +38,4%
+%  grave/fatal 2017: 12,9% | 2025: 24,3%
+Letalidade noite/crepúsculo: 5,1 | pleno dia: 2,3 | razão: 2,2
+18–23h: 25,2% dos acidentes e 38,3% das mortes
+Dias: Seg 13,5% | Ter 12,6% | Qua 13,5% | Qui 13,0% | Sex 16,0% | Sáb 15,8% | Dom 15,7%
+Mês de maior frequência: dez (9,7%)
+Acidentes com motocicleta: 51,0% | entre os graves/fatais: 63,6% | entre os fatais: 44,8%
+Acidentes com veículo pesado: 22,2% | entre os fatais: 47,3%
+Pessoas com estado físico informado (sem testemunhas): 11.332 | óbitos na base por pessoa: 179
+Vítimas graves/fatais: % masculino 82,2 | idade mediana 34 | 18–44 anos 73,3%
+Eixo BR-381 km 470–520: 83,8% dos acidentes e 75,0% das mortes
+Segmentos de 1 km com registros: 62 | 10 maiores: 44,6% dos acidentes
+Segmento mais frequente: BR-381 km 470–520, km 484 (333 acidentes; 61 com vítima grave/fatal)
+Segmentos com mais mortes:
+# A tibble: 5 × 6
+  eixo              km_seg     n mortos   ksi atrop
+  <chr>              <dbl> <int>  <dbl> <int> <int>
+1 BR-381 km 470–520    486   249     11    41    12
+2 BR-381 km 470–520    487   212      9    26     4
+3 BR-381 km 470–520    489   224      9    48    11
+4 BR-381 km 470–520    498   138      9    20     3
+5 BR-381 km 470–520    484   333      8    61     3
+Principais causas (% dos acidentes):
+# A tibble: 8 × 3
+  c                                                          n   pct
+  <chr>                                                  <int> <dbl>
+1 Falta de Atenção à Condução                              754 14.4 
+2 Ausência de reação do condutor                           752 14.3 
+3 Velocidade Incompatível                                  586 11.2 
+4 Não guardar distância de segurança (duas denominações)   559 10.7 
+5 Manobra de mudança de faixa                              344  6.56
+6 Reação tardia ou ineficiente do condutor                 326  6.22
+7 Demais falhas mecânicas ou elétricas                     191  3.64
+8 Defeito Mecânico no Veículo                              185  3.53
+Série anual:
+# A tibble: 9 × 5
+    ano acidentes mortos feridos_graves pct_grave_fatal
+  <int>     <int>  <dbl>          <dbl>           <dbl>
+1  2017       603     27             74            12.9
+2  2018       512     21             83            17.4
+3  2019       526     11             56            11.4
+4  2020       519     13             73            14.3
+5  2021       505     12             72            15.4
+6  2022       575     31            112            21.9
+7  2023       623     20            103            17.2
+8  2024       699     23            140            20.9
+9  2025       682     22            157            24.3
