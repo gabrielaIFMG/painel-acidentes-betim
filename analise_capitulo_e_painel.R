@@ -4,8 +4,9 @@
 #
 #  Entradas  : dados/acidentesAAAA_por_ocorrencia.xlsx  (PRF – dados abertos)
 #              dados/acidentesAAAA_por_pessoa.xlsx      (PRF – dados abertos)
-#  Saídas    : resultados/tabelas/  (Tabelas 1 a 3 do capítulo, .csv e .xlsx)
-#              resultados/figuras/  (Figuras 1 a 3 do capítulo, .jpg 300 dpi)
+#              resultados/tabelas/  (Tabelas 1 a 3 do capítulo, .csv e .xlsx)
+#              dados/rodovias_snv_betim.csv (traçado SNV/DNIT 202308A) e dados/pontos_referencia.csv
+#  Saídas    : resultados/figuras/  (Figuras 1 a 4 do capítulo, .jpg 300 dpi)
 #              resultados/numeros_do_texto.txt (todos os valores citados no texto)
 #              painel/dados.js      (base do painel interativo, 5.244 acidentes)
 #
@@ -15,7 +16,7 @@
 
 ## ------------------------------------------------------------ 0. CONFIGURAÇÃO
 pacotes <- c("readxl", "dplyr", "tidyr", "stringr", "stringi", "purrr",
-             "ggplot2", "patchwork", "scales", "jsonlite", "openxlsx")
+             "ggplot2", "ggrepel", "patchwork", "scales", "jsonlite", "openxlsx")
 faltam <- pacotes[!vapply(pacotes, requireNamespace, logical(1), quietly = TRUE)]
 if (length(faltam) > 0) install.packages(faltam)
 suppressPackageStartupMessages(invisible(lapply(pacotes, library, character.only = TRUE)))
@@ -292,6 +293,55 @@ f3 <- ggplot(e3, aes(km_seg)) + geom_col(aes(y = n, fill = "Acidentes")) +
   theme(axis.text.x = element_text(angle = 0, hjust = .5), legend.position = "top", legend.background = element_blank(),
         legend.spacing.y = unit(0, "pt"))
 salvar(f3, "Figura3", 7)
+
+# Figura 4 – mapa dos trechos críticos (traçado SNV/DNIT e pontos de referência)
+rod  <- read.csv(file.path(DIR_DADOS, "rodovias_snv_betim.csv"))
+refs <- read.csv(file.path(DIR_DADOS, "pontos_referencia.csv"), encoding = "UTF-8")
+seg_mapa <- ocor %>% filter(!is.na(eixo), coord_ok) %>% group_by(eixo, km_seg) %>%
+  summarise(lat = median(lat), lon = median(lon), .groups = "drop") %>%
+  inner_join(seg_full, by = c("eixo", "km_seg")) %>%
+  mutate(br_txt = ifelse(grepl("262", eixo), "BR-262", "BR-381"))
+xlim <- range(seg_mapa$lon) + c(-.01, .01); ylim <- range(seg_mapa$lat) + c(-.012, .012)
+km2  <- 2 / (111.32 * cos(mean(ylim) * pi / 180))            # 2 km em graus de longitude
+x0 <- xlim[1] + .01; y0 <- ylim[1] + .006
+camadas_base <- list(
+  geom_path(data = rod, aes(lon, lat, group = interaction(codigo, trecho)), colour = "grey60", linewidth = .5),
+  annotate("segment", x = x0, xend = x0 + km2, y = y0, yend = y0, linewidth = .8),
+  annotate("text", x = x0 + km2 / 2, y = y0 + .004, label = "2 km", size = 2.6, family = "serif"),
+  annotate("text", x = xlim[2] - .006, y = ylim[2] - .012, label = "N", size = 3.2, family = "serif", fontface = "bold"),
+  annotate("segment", x = xlim[2] - .006, xend = xlim[2] - .006, y = ylim[2] - .009, yend = ylim[2] - .002,
+           arrow = arrow(length = unit(.12, "cm")), linewidth = .5),
+  coord_quickmap(xlim = xlim, ylim = ylim, expand = FALSE),
+  theme_void(base_family = "serif"),
+  theme(plot.title = element_text(size = 10, hjust = 0), legend.position = "right", legend.title = element_text(size = 8),
+        legend.text = element_text(size = 7.5), panel.border = element_rect(colour = "grey70", fill = NA)))
+# Pontos de referência (quadrados) e rótulos num único conjunto, para que nenhum rótulo se sobreponha
+refs <- refs %>% filter(nome != "Hospital Regional")
+camada_refs <- geom_point(data = refs, aes(lon, lat), shape = 22, size = 2, fill = "white", colour = "grey10", stroke = .7)
+rotulos <- function(top, texto) {
+  bind_rows(top %>% transmute(lon, lat, texto = texto, face = "plain", nx = .025, ny = -.04),
+            refs %>% transmute(lon, lat, texto = nome, face = "italic", nx = 0, ny = -.007))
+}
+camada_rotulos <- function(df, semente) ggrepel::geom_label_repel(
+  data = df, aes(lon, lat, label = texto, fontface = face), size = 2.3, family = "serif", label.size = .15,
+  label.padding = .15, min.segment.length = 0, box.padding = .35, nudge_x = df$nx, nudge_y = df$ny,
+  max.overlaps = Inf, force = 3, seed = semente)
+top_a <- seg_mapa %>% slice_max(n, n = 5, with_ties = FALSE)
+top_m <- seg_mapa %>% slice_max(mortos, n = 5, with_ties = FALSE)
+f4a <- ggplot() + camadas_base +
+  geom_point(data = arrange(seg_mapa, n), aes(lon, lat, size = n), shape = 21, fill = "#4C72B0", colour = "white", alpha = .8) +
+  scale_size_area(max_size = 8, breaks = c(50, 150, 300), name = "Acidentes") + camada_refs +
+  camada_rotulos(rotulos(top_a, sprintf("%s km %d\n%d acidentes", top_a$br_txt, top_a$km_seg, top_a$n)), 1) +
+  guides(fontface = "none") + labs(title = "(a) Acidentes por trecho de 1 km")
+f4b <- ggplot() + camadas_base +
+  geom_point(data = arrange(filter(seg_mapa, mortos > 0), mortos), aes(lon, lat, size = mortos, fill = atrop),
+             shape = 21, colour = "white", alpha = .9) +
+  scale_size_area(max_size = 7, breaks = c(2, 5, 10), name = "Mortos") +
+  scale_fill_gradient(low = "#FDD49E", high = "#7F0000", name = "Atropela-\nmentos") + camada_refs +
+  camada_rotulos(rotulos(top_m, sprintf("%s km %d\n%d mortos", top_m$br_txt, top_m$km_seg, top_m$mortos)), 2) +
+  guides(size = guide_legend(override.aes = list(fill = "#B2182B"), order = 1)) +
+  labs(title = "(b) Mortos e atropelamentos por trecho de 1 km")
+salvar(f4a / f4b, "Figura4_mapa_trechos_criticos", 14)
 cat("Figuras salvas em", file.path(DIR_SAIDA, "figuras"), "\n")
 
 ## ------------------------------------------------------------ 6. EXPORTAÇÃO PARA O PAINEL

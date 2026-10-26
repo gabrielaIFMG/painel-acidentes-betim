@@ -10,10 +10,11 @@ Equipe: Artur Gonçalves de Jesus, Gabriela Oliveira e Bruno Oliveira da Silva.
 
 ```
 analise_capitulo_e_painel.R   rotina completa em R (capítulo + dados do painel)
-dados/                        planilhas da PRF (acidentesAAAA_por_ocorrencia.xlsx e acidentesAAAA_por_pessoa.xlsx)
+dados/                        planilhas da PRF (acidentesAAAA_por_ocorrencia.xlsx e acidentesAAAA_por_pessoa.xlsx),
+                              traçado das rodovias (rodovias_snv_betim.csv, SNV/DNIT 202308A) e pontos de referência
 resultados/
   tabelas/                    Tabelas 1 a 3 do capítulo (.csv e .xlsx) e tabelas auxiliares
-  figuras/                    Figuras 1 a 3 do capítulo (.jpg, 300 dpi)
+  figuras/                    Figuras 1 a 4 do capítulo (.jpg, 300 dpi), incluindo o mapa dos trechos críticos
   numeros_do_texto.txt        todos os valores citados no texto do capítulo
 painel/
   index.html                  painel (HTML + JavaScript + Leaflet)
@@ -50,6 +51,13 @@ para carregar o Leaflet e os mapas de fundo).
 2. No GitHub, crie uma *release* (por exemplo, `v1.0`). O Zenodo arquiva automaticamente a versão e gera um DOI.
 3. Use o DOI para citar o painel e a rotina no capítulo do e-book e no artigo, e atualize a seção
    "Sobre o painel" do `index.html` com o endereço definitivo e o DOI.
+
+## Leitura do painel
+
+- Na aba de polos, os números aparecem nos 10 maiores polos; aproxime o mapa (zoom 14 ou mais) para ver todos.
+- A legenda no canto inferior esquerdo indica as faixas de acidentes por polo.
+- Os pontos de referência (shoppings, indústrias, hospitais) ficam desligados por padrão e podem ser ativados no menu lateral.
+- Nos rankings, marcadores muito próximos são afastados automaticamente; a linha branca indica a posição real do polo.
 
 ## Observações metodológicas
 

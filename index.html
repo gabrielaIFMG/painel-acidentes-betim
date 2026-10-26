@@ -1,0 +1,2179 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Painel espacial de acidentes · BR-381 e BR-262 · Betim (MG)</title>
+  <meta name="description" content="Painel interativo dos acidentes registrados pela PRF nas rodovias BR-381 e BR-262 em Betim (MG), 2017–2025. Projeto de pesquisa IFMG Campus Betim.">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --ink: #17212b;
+      --muted: #66717c;
+      --line: #dfe5ea;
+      --soft: #f3f6f7;
+      --paper: #ffffff;
+      --navy: #123047;
+      --teal: #0d7b74;
+      --teal-2: #42b8a9;
+      --amber: #f2a93b;
+      --orange: #e7652b;
+      --red: #b92f2f;
+      --shadow: 0 12px 34px rgba(24, 42, 56, .12);
+      --radius: 16px;
+      --sidebar: 310px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #e9eef0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+    }
+
+    button, input, select { font: inherit; }
+
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 3px solid rgba(13, 123, 116, .25);
+      outline-offset: 2px;
+    }
+
+    .app {
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .topbar {
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 12px 20px;
+      color: #fff;
+      background: linear-gradient(115deg, #102b40 0%, #15465a 58%, #0d716d 100%);
+      box-shadow: 0 2px 14px rgba(5, 25, 36, .22);
+      z-index: 5;
+    }
+
+    .brand { display: flex; align-items: center; gap: 13px; min-width: 0; }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      color: #fff;
+      background: rgba(255,255,255,.13);
+      border: 1px solid rgba(255,255,255,.2);
+    }
+
+    .brand h1 { margin: 0; font-size: 19px; letter-spacing: -.02em; font-weight: 720; }
+    .brand p { margin: 3px 0 0; color: rgba(255,255,255,.72); font-size: 12px; }
+
+    .top-actions { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 34px;
+      padding: 7px 11px;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 999px;
+      background: rgba(255,255,255,.09);
+      color: rgba(255,255,255,.86);
+      font-size: 12px;
+    }
+
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ffc766; box-shadow: 0 0 0 3px rgba(255,199,102,.16); }
+    .status-dot.ready { background: #5fe0b1; box-shadow: 0 0 0 3px rgba(95,224,177,.16); }
+
+    .button {
+      min-height: 36px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 8px 12px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform .15s ease, background .15s ease, border-color .15s ease;
+    }
+
+    .button:hover { transform: translateY(-1px); }
+    .button.primary { color: #fff; background: var(--teal); }
+    .button.primary:hover { background: #096c66; }
+    .button.ghost { color: #fff; background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); }
+    .button.secondary { color: var(--navy); background: #fff; border-color: var(--line); }
+    .button.small { min-height: 31px; padding: 6px 9px; font-size: 12px; }
+
+    .body-grid {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: var(--sidebar) minmax(0, 1fr);
+    }
+
+    .sidebar {
+      min-height: 0;
+      overflow-y: auto;
+      padding: 18px 16px 22px;
+      background: #f7f9fa;
+      border-right: 1px solid var(--line);
+    }
+
+    .section { margin-bottom: 22px; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
+    .section-title h2 { margin: 0; color: var(--navy); font-size: 13px; text-transform: uppercase; letter-spacing: .075em; }
+    .section-title span { color: var(--muted); font-size: 11px; }
+
+    .field { margin-bottom: 11px; }
+    .field label { display: block; margin-bottom: 5px; color: #34424e; font-size: 12px; font-weight: 650; }
+
+    .select, .text-input, .number-input {
+      width: 100%;
+      min-height: 39px;
+      padding: 8px 10px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid #d5dde2;
+      border-radius: 9px;
+    }
+
+    .select:hover, .text-input:hover, .number-input:hover { border-color: #abb8c0; }
+
+    .range-row { display: grid; grid-template-columns: 1fr 74px; gap: 9px; align-items: center; }
+    input[type="range"] { width: 100%; accent-color: var(--teal); }
+    .number-input { min-height: 35px; padding: 6px 8px; text-align: right; }
+    .field-note { margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+
+    .check-row { display: flex; align-items: flex-start; gap: 8px; padding: 9px 0; color: #34424e; font-size: 12px; line-height: 1.35; }
+    .check-row input { margin-top: 2px; accent-color: var(--teal); }
+
+    .legend {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px 10px;
+      align-items: center;
+      padding: 11px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: #46535f;
+      font-size: 11px;
+    }
+
+    .legend-dot { border-radius: 50%; justify-self: center; box-shadow: 0 2px 6px rgba(75,28,9,.2); }
+    .legend-dot.low { width: 14px; height: 14px; background: #f7c85d; }
+    .legend-dot.high { width: 24px; height: 24px; background: #c9422d; }
+
+    .main {
+      min-width: 0;
+      min-height: 0;
+      overflow: auto;
+      padding: 15px;
+      display: grid;
+      grid-template-rows: auto minmax(610px, 1fr);
+      gap: 13px;
+    }
+
+    .kpis { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 10px; }
+
+    .kpi {
+      min-width: 0;
+      padding: 12px 14px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: 0 3px 12px rgba(26,42,53,.045);
+    }
+
+    .kpi-label { margin-bottom: 4px; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .055em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kpi-value { color: var(--navy); font-size: 25px; line-height: 1; font-weight: 760; letter-spacing: -.035em; }
+    .kpi-sub { margin-top: 5px; color: #80909b; font-size: 10px; }
+    .kpi.hot .kpi-value { color: var(--orange); }
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(520px, 1.62fr) minmax(310px, .82fr);
+      gap: 13px;
+    }
+
+    .card {
+      min-width: 0;
+      min-height: 0;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .map-card { position: relative; }
+    #map { width: 100%; height: 100%; min-height: 610px; background: #d7e0e4; }
+
+    .map-toolbar {
+      position: absolute;
+      z-index: 2;
+      top: 13px;
+      left: 13px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .map-chip {
+      padding: 8px 10px;
+      border: 1px solid rgba(255,255,255,.7);
+      border-radius: 10px;
+      color: #fff;
+      background: rgba(13, 36, 51, .87);
+      box-shadow: 0 4px 12px rgba(4,17,24,.2);
+      backdrop-filter: blur(8px);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .map-chip strong { display: block; margin-bottom: 2px; font-size: 12px; }
+
+    .map-placeholder {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: grid;
+      place-items: start center;
+      padding: 82px 24px 24px;
+      background:
+        linear-gradient(rgba(17,47,67,.22), rgba(17,47,67,.45)),
+        radial-gradient(circle at 30% 25%, #8aa899 0 10%, transparent 11%),
+        linear-gradient(135deg, #93aeb1 0%, #c6c5a8 48%, #6f8d7c 49%, #8da29d 100%);
+    }
+
+    .setup-card {
+      width: min(450px, 100%);
+      padding: 22px;
+      color: var(--ink);
+      background: rgba(255,255,255,.96);
+      border: 1px solid rgba(255,255,255,.75);
+      border-radius: 17px;
+      box-shadow: 0 16px 48px rgba(13,33,45,.26);
+    }
+
+    .setup-icon { width: 42px; height: 42px; display: grid; place-items: center; margin-bottom: 12px; border-radius: 12px; color: #fff; background: var(--teal); }
+    .setup-card h2 { margin: 0 0 7px; color: var(--navy); font-size: 18px; }
+    .setup-card p { margin: 0 0 14px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .key-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .privacy-note { margin-top: 9px; display: flex; gap: 7px; color: #71808b; font-size: 10px; line-height: 1.35; }
+    .error-note { display: none; margin-top: 9px; padding: 8px 10px; color: #8d2525; background: #fff0ef; border-radius: 8px; font-size: 11px; }
+    .error-note.visible { display: block; }
+
+    .side-stack { min-height: 0; display: grid; grid-template-rows: 1.07fr .93fr; gap: 13px; }
+
+    .panel-card { display: grid; grid-template-rows: auto minmax(0,1fr); }
+
+    .card-head {
+      min-height: 53px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .card-head h2 { margin: 0; color: var(--navy); font-size: 14px; }
+    .card-head p { margin: 3px 0 0; color: var(--muted); font-size: 10px; }
+    .card-badge { flex: 0 0 auto; padding: 5px 8px; border-radius: 999px; color: #0b6964; background: #e6f5f2; font-size: 10px; font-weight: 700; }
+
+    .street-wrap { position: relative; min-height: 280px; background: #e8edef; }
+    #streetview { position: absolute; inset: 0; }
+
+    .street-empty {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      padding: 25px;
+      text-align: center;
+      color: #687783;
+      background: linear-gradient(160deg, #edf2f3, #dce5e7);
+    }
+
+    .street-empty[hidden] { display: none; }
+    .street-empty svg { width: 43px; height: 43px; margin-bottom: 9px; color: #3b817d; }
+    .street-empty strong { display: block; margin-bottom: 4px; color: #324651; }
+    .street-empty span { font-size: 11px; line-height: 1.45; }
+
+    .details-body { min-height: 0; overflow-y: auto; padding: 13px 14px 15px; }
+    .details-empty { padding: 18px 10px; color: var(--muted); text-align: center; font-size: 12px; line-height: 1.55; }
+    .details-empty[hidden] { display: none; }
+
+    .cluster-summary { display: none; }
+    .cluster-summary.visible { display: block; }
+    .summary-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .summary-count { color: var(--orange); font-size: 30px; font-weight: 780; line-height: 1; letter-spacing: -.045em; }
+    .summary-count span { color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0; }
+    .summary-rank { color: var(--muted); font-size: 11px; }
+    .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .mini-metric { padding: 8px 9px; border-radius: 9px; background: var(--soft); }
+    .mini-metric span { display: block; color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .05em; }
+    .mini-metric strong { display: block; margin-top: 3px; color: #30414c; font-size: 12px; }
+    .detail-list { display: grid; gap: 9px; }
+    .detail-item { border-left: 3px solid #dfe8e8; padding-left: 9px; }
+    .detail-item span { display: block; color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .05em; }
+    .detail-item strong { display: block; margin-top: 2px; color: #2c3c47; font-size: 11px; line-height: 1.35; font-weight: 650; }
+
+    .ranking { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .ranking h3 { margin: 0 0 8px; color: var(--navy); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+    .ranking-list { display: grid; gap: 6px; }
+    .rank-button {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 23px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 7px 8px;
+      color: #344550;
+      text-align: left;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      cursor: pointer;
+    }
+    .rank-button:hover { background: #f6f9f9; border-color: #bdcacd; }
+    .rank-number { width: 23px; height: 23px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--orange); font-size: 10px; font-weight: 750; }
+    .rank-main { min-width: 0; }
+    .rank-main strong { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; }
+    .rank-main span { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rank-count { color: var(--orange); font-size: 13px; font-weight: 760; }
+
+    .cluster-bubble {
+      position: absolute;
+      display: grid;
+      place-items: center;
+      width: var(--bubble-size);
+      height: var(--bubble-size);
+      transform: translate(-50%, -50%);
+      color: #fff;
+      background: var(--bubble-color);
+      border: 2px solid rgba(255,255,255,.92);
+      border-radius: 50%;
+      box-shadow: 0 3px 11px rgba(64,21,9,.36);
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 780;
+      user-select: none;
+    }
+    .cluster-bubble:hover, .cluster-bubble:focus-visible { z-index: 5; filter: brightness(1.08); }
+    .cluster-bubble.selected { box-shadow: 0 0 0 4px rgba(255,255,255,.94), 0 0 0 7px rgba(13,123,116,.85), 0 5px 15px rgba(23,34,42,.42); }
+    .cluster-bubble.minor { opacity: .55; color: #17313d; background: #d8e0db; border-color: rgba(255,255,255,.85); }
+
+    .mobile-filter-button { display: none; }
+    .close-filters { display: none; }
+    .section-actions { display: flex; gap: 6px; }
+
+    @media (max-width: 1180px) {
+      :root { --sidebar: 280px; }
+      .kpis { grid-template-columns: repeat(3, 1fr); }
+      .workspace { grid-template-columns: 1fr; }
+      .side-stack { grid-template-columns: 1fr 1fr; grid-template-rows: 390px; }
+      #map { min-height: 590px; }
+    }
+
+    @media (max-width: 820px) {
+      .topbar { align-items: flex-start; padding: 12px 14px; }
+      .brand p, .status-pill { display: none; }
+      .body-grid { display: block; }
+      .sidebar {
+        position: fixed;
+        z-index: 20;
+        inset: 0 auto 0 0;
+        width: min(340px, 88vw);
+        padding-top: 21px;
+        box-shadow: 12px 0 34px rgba(20,35,44,.22);
+        transform: translateX(-105%);
+        transition: transform .22s ease;
+      }
+      .sidebar.open { transform: translateX(0); }
+      .mobile-filter-button { display: inline-flex; }
+      .close-filters { display: inline-flex; }
+      .main { min-height: calc(100vh - 68px); padding: 10px; grid-template-rows: auto auto; }
+      .kpis { grid-template-columns: repeat(2, 1fr); }
+      .kpi:last-child { grid-column: span 2; }
+      .workspace { grid-template-columns: 1fr; }
+      #map { min-height: 520px; }
+      .side-stack { grid-template-columns: 1fr; grid-template-rows: 390px 430px; }
+    }
+
+    @media (max-width: 520px) {
+      .brand-mark { display: none; }
+      .brand h1 { font-size: 16px; }
+      .top-actions .key-label { display: none; }
+      .kpi { padding: 10px; }
+      .kpi-value { font-size: 21px; }
+      .key-row { grid-template-columns: 1fr; }
+      #map { min-height: 470px; }
+      .map-chip { max-width: 190px; }
+    }
+
+    .leaflet-container { font-family: inherit; background: #d7e0e4; }
+    .leaflet-control-layers, .leaflet-bar { border: 0 !important; box-shadow: 0 4px 15px rgba(14,36,49,.22) !important; }
+    .leaflet-control-layers { border-radius: 10px !important; }
+    .leaflet-control-zoom a { color: var(--navy) !important; }
+    .leaflet-control-attribution { max-width: 72%; font-size: 9px !important; background: rgba(255,255,255,.82) !important; }
+    .cluster-count-label.leaflet-tooltip {
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      padding: 0;
+      color: #fff;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      pointer-events: none;
+    }
+    .cluster-count-label.leaflet-tooltip::before { display: none; }
+    .cluster-count-label.minor { color: #17313d; font-size: 9px; }
+    .leaflet-container:not(.zoom-detail) .cluster-count-label.secondary { display: none !important; }
+    .polos-legend { background: rgba(255,255,255,.94); border-radius: 10px; padding: 9px 11px; box-shadow: 0 2px 10px rgba(0,0,0,.25);
+      font: 12px/1.35 system-ui, sans-serif; color: #17313d; max-width: 230px; }
+    .polos-legend strong { display: block; margin-bottom: 5px; font-size: 12.5px; }
+    .polos-legend span { display: inline-flex; align-items: center; gap: 5px; margin: 0 10px 4px 0; }
+    .polos-legend i { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
+    .polos-legend small { display: block; margin-top: 4px; color: #4a5560; font-size: 11px; }
+
+    .centroid-leaflet-icon { background: transparent; border: 0; }
+    .centroid-crosshair {
+      position: relative;
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 3px solid #ffffff;
+      border-radius: 50%;
+      background: rgba(13, 123, 116, .92);
+      box-shadow: 0 0 0 3px #0d7b74, 0 5px 16px rgba(3, 27, 31, .48);
+    }
+    .centroid-crosshair::before,
+    .centroid-crosshair::after {
+      content: "";
+      position: absolute;
+      z-index: 0;
+      background: #ffffff;
+      box-shadow: 0 0 0 1px rgba(13, 123, 116, .75);
+    }
+    .centroid-crosshair::before { width: 42px; height: 2px; left: -7px; top: 13px; }
+    .centroid-crosshair::after { width: 2px; height: 42px; left: 13px; top: -7px; }
+    .centroid-crosshair span {
+      position: relative;
+      z-index: 1;
+      width: 8px;
+      height: 8px;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      background: #0d7b74;
+    }
+    .centroid-popup { color: #31434e; font-size: 11px; line-height: 1.45; }
+    .centroid-popup strong { display: block; margin-bottom: 3px; color: #0b6964; font-size: 12px; }
+    .centroid-popup code { color: #53636e; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 10px; }
+
+    .google-actions {
+      display: grid;
+      align-content: center;
+      gap: 12px;
+      padding: 24px;
+      color: #44535e;
+      background:
+        radial-gradient(circle at 82% 18%, rgba(66,184,169,.12), transparent 34%),
+        linear-gradient(160deg, #f5f8f8, #e5ecee);
+    }
+    .google-actions-intro { text-align: center; }
+    .google-actions-icon {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 10px;
+      color: #fff;
+      background: var(--teal);
+      border-radius: 14px;
+      box-shadow: 0 8px 20px rgba(13,123,116,.22);
+    }
+    .google-actions strong { display: block; color: var(--navy); font-size: 14px; }
+    .google-actions p { margin: 5px auto 0; max-width: 310px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .google-link-grid { display: grid; gap: 8px; }
+    .google-link {
+      min-height: 49px;
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      gap: 9px;
+      align-items: center;
+      padding: 8px 10px;
+      color: #263944;
+      text-decoration: none;
+      background: #fff;
+      border: 1px solid #d4dfe2;
+      border-radius: 11px;
+      box-shadow: 0 3px 10px rgba(20,40,52,.06);
+      transition: transform .15s ease, border-color .15s ease;
+    }
+    .google-link:hover { transform: translateY(-1px); border-color: #79aaa6; }
+    .google-link-icon { width: 34px; height: 34px; display: grid; place-items: center; color: #fff; background: #3478d4; border-radius: 9px; }
+    .google-link:nth-child(2) .google-link-icon { background: #e0a126; }
+    .google-link strong { font-size: 11px; }
+    .google-link span { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; }
+    .google-link-arrow { color: #82909a; font-size: 16px; }
+    .google-link.disabled { opacity: .48; pointer-events: none; }
+    .no-key-note { text-align: center; color: #71808b; font-size: 9px; line-height: 1.4; }
+
+    @media (min-width: 1181px) {
+      .workspace { height: calc(100vh - 188px); min-height: 610px; }
+    }
+
+    /* Additional views retain the original map and pole controls. */
+    [hidden] { display: none !important; }
+    a:focus-visible, summary:focus-visible { outline: 3px solid #42b8a9; outline-offset: 3px; }
+    button:disabled, select:disabled { opacity: .5; cursor: not-allowed; }
+    .main { display: flex; flex-direction: column; overflow: visible; }
+    .view-switch { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding: 5px; background: #dce6e9; border-radius: 13px; }
+    .view-tab { flex: 1; min-height: 43px; padding: 9px 13px; border: 0; border-radius: 9px; color: #425666; background: transparent; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .view-tab span { margin-right: 7px; font-size: 10px; opacity: .65; }
+    .view-tab.active { color: #fff; background: var(--navy); box-shadow: 0 3px 8px #12304722; }
+    .view-tab:not(.active):hover { background: #edf3f4; }
+    .view-switch > .button { margin-right: 3px; }
+    /* Compact viewport-height map, matching the visible area in the supplied reference. */
+    :root { --map-panel-height: clamp(380px, calc(100dvh - 255px), 600px); }
+    .workspace { flex: none; height: var(--map-panel-height); min-height: 0; grid-template-columns: minmax(380px, 1fr) minmax(360px, 430px); }
+    .main[data-mode="poles"] .workspace, .main:not([data-mode="poles"]) .workspace { height: var(--map-panel-height); flex: none; }
+    .main:not([data-mode="poles"]) .side-stack { display: none; }
+    .map-card { height: var(--map-panel-height); }
+    #map { min-height: 0; height: 100%; }
+    .side-stack { height: var(--map-panel-height); grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0, 1.2fr) minmax(0, 1fr); }
+    .side-stack .street-wrap { min-height: 0; overflow-y: auto; }
+    .side-stack .google-actions { padding: 12px; gap: 8px; }
+    .side-stack .google-actions-icon { display: none; }
+    .km-panel { max-height: var(--map-panel-height); }
+    .map-toolbar { z-index: 450; top: 14px; left: 54px; right: 65px; }
+    .map-chip { max-width: 100%; line-height: 1.45; }
+    .temporal-map-legend { position: absolute; left: 12px; right: 12px; bottom: 27px; z-index: 450; padding: 9px 12px; display: flex; flex-wrap: wrap; gap: 8px 14px; color: #fff; background: #102b40ed; border: 1px solid #ffffff44; border-radius: 10px; font-size: 10px; pointer-events: none; }
+    .temporal-map-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .temporal-map-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .dot-normal { background: #ffe3a1; }.dot-serious { background: #b898f1; }.dot-fatal { background: #ff6174; }
+    .timeline-controls { padding: 17px 20px; flex: none; }
+    .timeline-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .eyebrow { font-size: 10px; letter-spacing: .13em; font-weight: 750; }
+    .timeline-top .eyebrow { color: var(--teal); }
+    .timeline-top h2 { margin: 4px 0; color: var(--navy); font-size: 23px; letter-spacing: -.025em; }
+    .timeline-top p { margin: 0; color: var(--muted); font-size: 12px; }
+    .playback-buttons { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .speed-label { display: grid; gap: 3px; color: var(--muted); font-size: 10px; }
+    .speed-label select { min-height: 32px; width: 85px; padding: 5px 8px; }
+    #timelineSeek { margin: 18px 0 4px; }
+    .timeline-labels { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 10px; }
+    .year-chapters { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 12px; }
+    .year-chapters button { flex: 1; padding: 7px; min-width: 48px; border: 1px solid var(--line); border-radius: 6px; color: #536775; background: #f6f9fa; cursor: pointer; font-size: 11px; }
+    .year-chapters button.active { color: #fff; background: var(--teal); border-color: var(--teal); }
+    .timeline-note { margin: 10px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .timeline-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; margin-top: 15px; padding: 12px 15px; background: #edf7f5; border: 1px solid #cee5df; border-radius: 10px; }
+    .timeline-summary > div { display: flex; flex-direction: column; gap: 3px; }
+    .timeline-summary span { color: #4f726c; font-size: 10px; }
+    .timeline-summary strong { color: #096c66; font-size: 25px; font-variant-numeric: tabular-nums; }
+    .timeline-summary p { flex: 1; min-width: 180px; margin: 0; color: #4f726c; font-size: 11px; line-height: 1.5; }
+    #eventMapLegend { display: inline-flex; flex-wrap: wrap; gap: 8px 14px; }
+    .dot-cumulative { background: #42b8a9; }
+    .km-panel { display: flex; flex-direction: column; }
+    .km-panel-head { padding: 21px 20px 16px; color: #fff; background: var(--navy); flex: none; }
+    .km-panel-head .eyebrow { color: #88d5cd; }
+    .km-panel-head h2 { margin: 5px 0 6px; font-size: 27px; letter-spacing: -.035em; }
+    .km-panel-head p { margin: 0; font-size: 11px; line-height: 1.5; color: #c5d4df; }
+    .km-totals { display: flex; justify-content: space-between; gap: 10px; margin-top: 15px; padding-top: 13px; border-top: 1px solid #ffffff24; }
+    .km-totals span { color: #bccdd9; font-size: 10px; }.km-totals strong { display: block; color: #fff; font-size: 21px; }
+    .km-panel-body { padding: 16px; overflow-y: auto; min-height: 0; }
+    .km-ranking + .km-ranking { margin-top: 22px; }
+    .km-ranking-title { margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 5px; justify-content: space-between; align-items: center; }
+    .km-ranking-title h3 { display: flex; align-items: center; gap: 7px; margin: 0; color: var(--navy); font-size: 13px; }
+    .km-ranking-title > span { font-size: 9px; color: var(--muted); }
+    .rank-key { display: inline-grid; place-items: center; width: 21px; height: 21px; font-style: normal; border-radius: 50%; font-size: 11px; color: #fff; }.accident-key { background: #bc501d; }.severe-key { background: #6d43a9; }
+    .km-list { display: grid; gap: 7px; }
+    .km-row { display: grid; grid-template-columns: 23px minmax(0,1fr) auto; align-items: start; gap: 8px; padding: 10px 9px 8px; background: #fafbfc; border: 1px solid #e1e7eb; border-radius: 9px; }
+    .km-position { padding-top: 1px; color: #82929e; font-size: 16px; font-weight: 750; }
+    .km-row a { font-size: 12px; font-weight: 750; color: #124b68; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    .km-row strong.no-location { display: block; font-size: 12px; color: #58646d; }
+    .km-row .km-meta { display: block; margin-top: 4px; color: var(--muted); font-size: 9px; line-height: 1.4; }
+    .km-bar { margin-top: 7px; height: 3px; background: #e8e1d9; border-radius: 3px; overflow: hidden; }.km-bar i { display: block; height: 100%; background: #ca652e; }.km-row.severe .km-bar { background: #e9e0f3; }.km-row.severe .km-bar i { background: #8055b4; }
+    .km-numbers { min-width: 75px; text-align: right; font-variant-numeric: tabular-nums; }
+    .km-numbers strong { display: block; color: #b84a1c; font-size: 18px; line-height: 1.1; }.km-row.severe .km-numbers strong { color: #6a399d; font-size: 15px; }.km-numbers small { display: block; color: var(--muted); font-size: 9px; margin-top: 4px; }
+    .locate-km { display: inline-block; padding: 4px 6px; margin-top: 6px; border: 1px solid #d4dee2; border-radius: 5px; color: #426272; background: white; cursor: pointer; font-size: 9px; }
+    .rank-footnote { font-size: 10px; color: var(--muted); line-height: 1.55; margin: 13px 0 0; }
+    .quality-summary { font-size: 11px; line-height: 1.45; padding: 9px 10px; border-left: 3px solid #dca341; border-radius: 3px; color: #645338; background: #faf3e6; }
+    .method-details { margin-top: 12px; color: var(--muted); font-size: 10px; line-height: 1.55; }.method-details summary { cursor: pointer; color: #38566b; font-weight: 650; }.method-details p { margin: 9px 0; }.method-details a { color: #0d7b74; }
+    .km-map-icon { background: none; border: none; }.km-marker { display: grid; place-items: center; width: 44px; height: 44px; border: 3px solid white; border-radius: 50%; color: white; background: #bc501d; box-shadow: 0 3px 12px #0008; font: 750 12px/1.2 system-ui; }.km-marker.severe { background: #6d43a9; }.km-marker.dual { background: linear-gradient(130deg,#bc501d 47%,#6d43a9 53%); font-size: 10px; }
+    .km-popup { line-height: 1.55; min-width: 160px; }.km-popup strong { display: block; color: var(--navy); }.km-popup a { display: block; margin-top: 6px; font-weight: 700; }
+    @media(max-width:1300px) { :root { --sidebar: 265px; }.workspace { grid-template-columns: minmax(300px,1fr) minmax(320px,380px); }.main { padding: 12px; }.view-tab { font-size: 12px; padding: 8px; }.kpis { gap: 6px; grid-template-columns: repeat(5,minmax(0,1fr)); }.kpi { padding: 11px 9px; }.kpi-sub { line-height: 1.4; } }
+    @media(max-width:1050px) { .workspace { grid-template-columns: minmax(0,1fr); }.main[data-mode="poles"] .workspace,.main:not([data-mode="poles"]) .workspace { height: auto; }.map-card { height: 650px; }.side-stack { grid-template-columns: 1fr 1fr; grid-template-rows: auto; }.km-panel-body { overflow: visible; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }.km-ranking + .km-ranking { margin-top: 0; }.km-panel-body > p,.km-panel-body > details { grid-column: 1/-1; }.timeline-top { flex-wrap: wrap; } }
+    @media(max-width:650px) { .view-switch { gap: 3px; }.view-tab { flex: 1 1 100%; text-align: left; }.view-switch > .button { width: 100%; }.kpis { grid-template-columns: repeat(2,minmax(0,1fr)); }.kpi:last-child { grid-column: 1/-1; }.map-card { height: 520px; }#map { min-height: 520px; }.side-stack,.km-panel-body { grid-template-columns: 1fr; }.km-ranking + .km-ranking { margin-top: 10px; }.timeline-controls { padding: 14px; }.timeline-labels span:nth-child(2) { display:none; }.km-panel-head { padding: 18px; } }
+    @media(prefers-reduced-motion:reduce) { *,*::before,*::after { transition: none !important; scroll-behavior: auto !important; } }
+    @media(max-width:1050px) {
+      .main[data-mode="poles"] .workspace,.main:not([data-mode="poles"]) .workspace { height: auto; }
+      .map-card { height: var(--map-panel-height); }
+      #map { min-height: 0; }
+      .side-stack { height: auto; grid-template-columns: minmax(0,1fr); grid-template-rows: 380px 255px; }
+      .km-panel-body { overflow-y: auto; }
+    }
+    @media(max-width:650px) { .side-stack { grid-template-rows: 380px 255px; } }
+    .priority-panel { margin-top:20px; padding:22px; }
+    .priority-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    .priority-cell { background:#f2f7f8; border:1px solid #dce6eb; border-top:4px solid #167e78; border-radius:12px; padding:14px; max-height:330px; overflow:auto; }
+    .priority-cell.high-load { border-top-color:#c2543a; background:#fff7f3; }
+    .priority-cell h3,.pole-history h3 { font-size:14px; color:#15364b; margin:0 0 10px; }
+    .priority-item { display:block; width:100%; padding:10px; margin:7px 0; border:1px solid #dce6eb; background:white; border-radius:8px; text-align:left; color:#17364a; font:inherit; font-size:12px; white-space:pre-line; line-height:1.6; cursor:pointer; }
+    .priority-item:hover,.priority-item:focus-visible { outline:2px solid #16877f; }
+    .pole-history { margin:14px 0; }
+    .history-table { width:100%; border-collapse:collapse; font-size:11px; }
+    .history-table th { text-align:left; padding:5px 3px; }
+    .history-table td { padding:3px; min-width:48px; }
+    .history-bar { display:block; padding:4px; background-repeat:no-repeat; background-image:linear-gradient(#cfebe6,#cfebe6); color:#143647; border-radius:3px; }
+    .history-bar.series-1 { background-image:linear-gradient(#f7d6d1,#f7d6d1); }
+    .history-bar.series-2 { background-image:linear-gradient(#ffebc8,#ffebc8); }
+    .leaflet-popup-content { max-height:430px; overflow:auto; }
+    @media(max-width:650px) { .priority-grid { grid-template-columns:1fr; }.priority-panel{padding:14px;} }
+    .landmark-icon { background:transparent; border:0; --poi-color:#607d8b; }
+    .landmark-label { position:relative; display:block; width:20px; height:20px; color:var(--poi-color); }
+    .landmark-symbol { display:grid; place-items:center; width:20px; height:20px; border-radius:50%; background:var(--poi-color); box-shadow:0 0 0 1.5px white,0 1px 4px #0008; }
+    .landmark-symbol svg { width:14px; height:14px; fill:none; stroke:white; stroke-width:1.8; stroke-linejoin:round; stroke-linecap:round; }
+    .landmark-name { position:absolute; left:26px; top:2px; font:600 12px/16px Arial,"Segoe UI",sans-serif; white-space:nowrap; color:var(--poi-color); text-shadow:-1px -1px 1px white,1px -1px 1px white,-1px 1px 1px white,1px 1px 1px white,0 0 4px white; }
+    .landmark-satellite .landmark-name { color:white; text-shadow:-1px -1px 2px #25313e,1px -1px 2px #25313e,-1px 1px 2px #25313e,1px 1px 2px #25313e,0 0 4px #25313e; }
+    .landmark-left .landmark-name { left:auto; right:26px; }
+    .landmark-top .landmark-name { top:auto; bottom:25px; left:10px; transform:translateX(-50%); }
+    .landmark-bottom .landmark-name { top:25px; left:10px; transform:translateX(-50%); }
+    .landmark-compact .landmark-name { display:none; }
+    .landmark-icon:hover .landmark-name,.landmark-icon:focus-visible .landmark-name { display:block; font-weight:700; }
+    .landmark-icon:focus-visible { outline:3px solid #f3b344; outline-offset:4px; border-radius:50%; }
+    .landmark-shortcuts { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+    .landmark-shortcuts button { border:1px solid #b8cfd6; border-radius:7px; background:white; color:#14515c; padding:8px 10px; font:600 12px "Segoe UI",sans-serif; cursor:pointer; }
+    .landmark-shortcuts button:hover,.landmark-shortcuts button:focus-visible { background:#e4f3f2; outline:2px solid #087f83; }
+    .landmark-popup p { font-size:12px; line-height:1.5; }
+    .landmark-popup a { display:block; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="25" height="25" viewBox="0 0 24 24" fill="none">
+            <path d="M4 19V7.6L9.2 5v11.4L4 19Zm5.2-2.6L14.7 19V7.6L9.2 5v11.4Zm5.5 2.6 5.3-2.7V5l-5.3 2.6V19Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+            <circle cx="12" cy="10.5" r="2.2" fill="#ffbd55"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Painel espacial de acidentes</h1>
+          <p id="sourceLine">Análise de concentração</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="status-pill" aria-live="polite"><span id="mapStatusDot" class="status-dot ready"></span><span id="mapStatus">Mapa aéreo conectado</span></div>
+        <button id="mobileFilters" class="button ghost mobile-filter-button" type="button">Filtros</button>
+        <a id="openGoogleArea" class="button ghost" href="#" target="_blank" rel="noopener noreferrer" title="Abrir esta área no Google Maps">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19V7.6L9.2 5v11.4L4 19Zm5.2-2.6L14.7 19V7.6L9.2 5v11.4Zm5.5 2.6 5.3-2.7V5l-5.3 2.6V19Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          <span class="key-label">Abrir área no Google</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="body-grid">
+      <aside id="sidebar" class="sidebar" aria-label="Filtros e critérios de aglomeração">
+        <section class="section">
+          <div class="section-title">
+            <h2>Filtros</h2>
+            <div class="section-actions">
+              <button id="resetFilters" class="button secondary small" type="button">Limpar</button>
+              <button id="closeFilters" class="button secondary small close-filters" type="button">Fechar</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="yearFilter">Ano</label>
+            <select id="yearFilter" class="select"></select>
+          </div>
+          <div class="field">
+            <label for="roadFilter">Rodovia (BR)</label>
+            <select id="roadFilter" class="select"></select>
+          </div>
+          <div class="field">
+            <label for="causeFilter">Causa do acidente</label>
+            <select id="causeFilter" class="select"></select>
+          </div>
+          <div class="field">
+            <label for="typeFilter">Tipo do acidente</label>
+            <select id="typeFilter" class="select"></select>
+          </div>
+          <div class="field">
+            <label for="classFilter">Classificação</label>
+            <select id="classFilter" class="select"></select>
+          </div>
+          <div class="field">
+            <label for="severityFilter">Severidade</label>
+            <select id="severityFilter" class="select"></select>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-title"><h2>Critério dos polos</h2><span>ajustável</span></div>
+          <div class="field">
+            <label for="clusterMethod">Método de agrupamento</label>
+            <select id="clusterMethod" class="select"><option value="cells">Células espaciais · atual</option><option value="dbscan">Proximidade · DBSCAN</option></select>
+            <p id="methodHint" class="field-note">Células fixas: pontos em células vizinhas podem formar polos diferentes.</p>
+            <label id="scaleLabel" for="scaleRange">Largura da célula espacial</label>
+            <div class="range-row">
+              <input id="scaleRange" type="range" min="100" max="2000" step="50" value="500">
+              <input id="scaleNumber" class="number-input" type="number" min="100" max="2000" step="50" value="500" aria-label="Largura da célula em metros">
+            </div>
+            <p class="field-note">Metros. Valores maiores consolidam áreas próximas.</p>
+          </div>
+          <div class="field">
+            <label for="minimumRange">Mínimo de ocorrências por polo</label>
+            <div class="range-row">
+              <input id="minimumRange" type="range" min="2" max="50" step="1" value="5">
+              <input id="minimumNumber" class="number-input" type="number" min="1" max="500" step="1" value="5" aria-label="Mínimo de ocorrências por polo">
+            </div>
+            <p class="field-note">No DBSCAN, é o mínimo de ocorrências na vizinhança, incluindo a própria ocorrência. Pontos isolados ficam fora dos rankings.</p>
+          </div>
+          <label class="check-row" for="showMinor">
+            <input id="showMinor" type="checkbox">
+            <span>Mostrar também ocorrências fora dos polos</span>
+          </label>
+        </section>
+
+        <section class="section" aria-label="Locais conhecidos">
+          <div class="section-title"><h2>Pontos de referência</h2></div>
+          <label class="check-row"><input id="showLandmarks" type="checkbox"><span>Mostrar nomes de locais conhecidos</span></label>
+          <p class="field-note">Ícones pequenos e nomes identificam locais, não acidentes. Compras em laranja, saúde em vermelho, ensino em azul e indústria em cinza. Aproxime o mapa para ver mais nomes; passe o mouse ou toque em um ícone para identificar o local.</p>
+          <div id="landmarkShortcuts" class="landmark-shortcuts"></div>
+          <p class="field-note">Posições aproximadas dos locais; não indicam portarias ou acessos. Fontes disponíveis ao clicar. Referências cartográficas: © colaboradores do OpenStreetMap (ODbL), via Mapcarta, e fontes indicadas nos detalhes.</p>
+        </section>
+        <section class="section geographic-controls">
+          <div class="section-title"><h2>Triagem geográfica</h2><span>reversível</span></div>
+          <label class="check-row"><input id="hideDisplaced" type="checkbox" checked><span>Ocultar pontos muito afastados da BR informada</span></label>
+          <div class="field"><label for="roadTolerance">Distância máxima ao traçado (m)</label><input id="roadTolerance" class="number-input" type="number" min="100" max="5000" step="50" value="500"><p class="field-note">500 m por padrão. Distância aproximada ao eixo, não à borda da pista.</p></div>
+          <p id="geographicSummary" class="quality-summary" aria-live="polite"></p>
+          <label class="check-row"><input id="showRoadReference" type="checkbox"><span>Mostrar traçado de referência no mapa</span></label>
+          <label class="check-row"><input id="snapCentroids" type="checkbox" checked><span>Alinhar os marcadores dos polos ao eixo da rodovia</span></label>
+          <p class="field-note">Ajuste apenas visual: projeção do centróide no segmento mais próximo do traçado SNV, sem alterar os registros nem as contagens. A geometria é aproximada e não determina a faixa de tráfego.</p>
+          <button id="downloadGeographicAudit" class="button secondary small" type="button">Baixar registros sinalizados · CSV</button>
+          <details class="method-details"><summary>Fonte e tratamento</summary><p>Geometria SNV/DNIT, versão <strong>202308A</strong>, disponibilizada pelo <a href="https://observatorio.infraestrutura.mg.gov.br/server/rest/services/Hosted/Rodovias_DNIT/FeatureServer/0" target="_blank" rel="noopener noreferrer">Observatório de Infraestrutura de MG</a>, consultada em 03/09/2026. Recorte local dos trechos pavimentados das BRs 262 e 381, incluindo contornos e coincidências.</p><p>Coordenadas que perderam o separador decimal no registro original (por exemplo, -2005039xxx) foram corrigidas por reescalonamento; as que permaneceram fora dos limites do município ficaram sem posição e aparecem como “fora do mapa”. Nenhuma quilometragem foi alterada. A distância excessiva é uma indicação para revisão, não prova de erro. A base de referência pode não refletir mudanças posteriores a 2023. Os registros ocultos permanecem no total filtrado, mas não integram polos nem rankings espaciais. O arquivo CSV preserva a coordenada original e informa o motivo da sinalização.</p></details>
+        </section>
+
+        <section id="poleLegend" class="section">
+          <div class="section-title"><h2>Como ler</h2></div>
+          <div class="legend">
+            <span class="legend-dot low" aria-hidden="true"></span><span>Polo com menos ocorrências</span>
+            <span class="legend-dot high" aria-hidden="true"></span><span>Polo com maior concentração</span>
+          </div>
+          <p class="field-note">O número no círculo é a quantidade de acidentes do polo após os filtros. Com o alinhamento ativado, o círculo fica na projeção do centróide sobre o eixo da rodovia. O centróide calculado permanece disponível nos detalhes.</p>
+        </section>
+        <section id="spatialLegend" class="section" hidden><div class="section-title"><h2>Como ler os rankings</h2></div><p class="field-note"><strong>A</strong>: acidentes. <strong>S</strong>: combinado, mortes primeiro. <strong>M</strong>: mortes. <strong>G</strong>: feridos graves. Os números de 1 a 5 indicam a posição em cada lista. Escolha o par de destaques abaixo dos rankings. Duas letras no mesmo marcador indicam presença nas duas listas. Com o alinhamento ativado, os marcadores ficam no eixo rodoviário mais próximo do centróide.</p><p class="field-note">O km informado é uma referência do registro representativo, não o critério de agrupamento.</p></section>
+      </aside>
+
+      <main class="main" data-mode="poles">
+        <nav class="view-switch" aria-label="Modo de visualização">
+          <button class="view-tab active" data-view="poles" type="button" aria-pressed="true"><span>01</span> Polos espaciais</button>
+          <button class="view-tab" data-view="timeline" type="button" aria-pressed="false"><span>02</span> Evolução no tempo</button>
+          <button class="view-tab" data-view="rankings" type="button" aria-pressed="false"><span>03</span> Rankings espaciais</button>
+          <button id="fitAnalysis" class="button secondary small" type="button">Enquadrar mapa</button>
+        </nav>
+        <section class="kpis" aria-label="Resumo dos resultados">
+          <article class="kpi"><div class="kpi-label">Ocorrências filtradas</div><div id="kpiTotal" class="kpi-value">—</div><div id="kpiTotalSub" class="kpi-sub">—</div></article>
+          <article class="kpi"><div class="kpi-label">Aptas ao mapa</div><div id="kpiMapped" class="kpi-value">—</div><div class="kpi-sub">após a triagem geográfica</div></article>
+          <article class="kpi"><div class="kpi-label">Fora do mapa</div><div id="kpiUnmapped" class="kpi-value">—</div><div class="kpi-sub">sem localização confiável · entram nos totais</div></article>
+          <article class="kpi hot"><div class="kpi-label">Polos identificados</div><div id="kpiPoles" class="kpi-value">—</div><div id="kpiPolesSub" class="kpi-sub">mínimo de 5 ocorrências</div></article>
+          <article class="kpi hot"><div class="kpi-label">Maior polo</div><div id="kpiMax" class="kpi-value">—</div><div class="kpi-sub">ocorrências no mesmo grupo</div></article>
+        </section>
+
+        <section id="timelineControls" class="timeline-controls card" hidden aria-label="Controles da animação">
+          <div class="timeline-top">
+            <div><div class="eyebrow">EVOLUÇÃO MENSAL</div><h2 id="timelineDate">Janeiro de 2017</h2><p id="timelineStatus" aria-live="polite">Pronta para iniciar</p></div>
+            <div class="playback-buttons">
+              <button id="timelineRestart" class="button secondary" type="button" title="Voltar ao primeiro mês">↺ Reiniciar</button>
+              <button id="timelinePlay" class="button primary" type="button">▶ Reproduzir</button>
+              <label class="speed-label" for="timelineSpeed">Velocidade<select id="timelineSpeed" class="select"><option value="1600">0,5×</option><option value="800" selected>1×</option><option value="400">2×</option><option value="150">5×</option></select></label>
+            </div>
+          </div>
+          <div class="timeline-summary" aria-label="Acumulação das ocorrências no mapa"><div><span id="timelineAccumulatedLabel">Acumulado no ano · no mapa</span><strong id="timelineAccumulated">0</strong></div><div><span>Acrescentados neste mês · no mapa</span><strong id="timelineNewMonth">0</strong></div><p id="timelineScope">O acumulado recomeça em janeiro de cada ano.</p></div>
+          <input id="timelineSeek" type="range" min="0" max="107" value="0" step="1" aria-label="Mês da animação">
+          <div class="timeline-labels"><span id="timelineStart">2017</span><span>Janeiro → dezembro · balanço de cada ano · síntese final</span><span id="timelineEnd">2025</span></div>
+          <div id="yearChapters" class="year-chapters" aria-label="Ir ao balanço de um ano"></div>
+          <p class="timeline-note">Cada círculo mostra a quantidade <strong>acumulada desde janeiro</strong> no grupo. Os grupos são recalculados a cada etapa: no DBSCAN, podem se unir conforme surgem novas ocorrências. Ao fechar dezembro, os Top 5 escolhidos são exibidos por <strong>6 segundos</strong>; em janeiro seguinte, o acumulado recomeça do zero. Ocorrências fora dos polos aparecem no acumulado, mas não entram nos rankings. O filtro de ano fica suspenso durante a animação.</p>
+        </section>
+
+        <section class="workspace">
+          <article class="card map-card" aria-label="Mapa aéreo com polos de acidentes">
+            <div id="map"></div>
+            <div class="map-toolbar"><div class="map-chip"><strong id="mapModeTitle">Polos espaciais</strong><span id="mapCaption">Carregando os polos…</span></div></div>
+            <div id="temporalMapLegend" class="temporal-map-legend" hidden><span id="eventMapLegend"><span><i class="dot-normal"></i> Ocorrência</span><span><i class="dot-serious"></i> Com graves</span><span><i class="dot-fatal"></i> Com mortes</span></span><span id="cumulativeMapLegend" hidden><i class="dot-cumulative"></i> Número no círculo = acidentes acumulados</span><span id="topMapLegend">A = acidentes · S = severidade</span></div>
+          </article>
+
+          <div class="side-stack">
+            <article id="poleDetailsPanel" class="card panel-card">
+              <header class="card-head">
+                <div><h2>Leitura do polo</h2><p>Perfil e evolução do grupo selecionado</p></div>
+                <span id="selectionBadge" class="card-badge">nenhum selecionado</span>
+              </header>
+              <div class="details-body" aria-live="polite">
+                <div id="detailsEmpty" class="details-empty">Selecione um círculo no mapa ou um item do ranking para examinar o polo.</div>
+                <div id="clusterSummary" class="cluster-summary">
+                  <div class="summary-top"><div class="summary-count"><strong id="detailCount">0</strong> <span>ocorrências</span></div><div id="detailRank" class="summary-rank"></div></div>
+                  <div class="metric-grid">
+                    <div class="mini-metric"><span>Participação</span><strong id="detailShare">—</strong></div>
+                    <div class="mini-metric"><span>Período</span><strong id="detailPeriod">—</strong></div>
+                    <div class="mini-metric"><span>Mortos</span><strong id="detailDeaths">—</strong></div>
+                    <div class="mini-metric"><span>Feridos graves</span><strong id="detailSerious">—</strong></div>
+                  </div>
+                  <div id="poleHistory" class="pole-history"></div>
+                  <div class="detail-list">
+                    <div class="detail-item"><span>Centróide calculado · original</span><strong id="detailCentroid">—</strong></div>
+                    <div class="detail-item"><span>Posição exibida no mapa</span><strong id="detailMapPosition">—</strong></div>
+                    <div class="detail-item"><span>Causa predominante das mortes</span><strong id="detailDeathCause">-</strong></div>
+                    <div class="detail-item"><span>Causa predominante dos feridos graves</span><strong id="detailSeriousCause">-</strong></div>
+                    <div class="detail-item"><span>Tipo predominante nos eventos fatais</span><strong id="detailFatalType">-</strong></div>
+                    <div class="detail-item"><span>Tipo predominante nos eventos com feridos graves</span><strong id="detailSeriousType">-</strong></div>
+                    <div class="detail-item"><span>Local predominante</span><strong id="detailLocation">—</strong></div>
+                    <div class="detail-item"><span>Causa predominante</span><strong id="detailCause">—</strong></div>
+                    <div class="detail-item"><span>Tipo predominante</span><strong id="detailType">—</strong></div>
+                    <div class="detail-item"><span>Severidade predominante</span><strong id="detailSeverity">—</strong></div>
+                  </div>
+                </div>
+                <div class="ranking">
+                  <h3>Polos com mais ocorrências</h3>
+                  <div id="rankingList" class="ranking-list"></div>
+                </div>
+              </div>
+            </article>
+
+            <article id="googlePanel" class="card panel-card">
+              <header class="card-head">
+                <div><h2>Visualizações Google</h2><p>Links oficiais para o ponto selecionado</p></div>
+                <span class="card-badge">links externos</span>
+              </header>
+              <div class="street-wrap">
+                <div class="google-actions">
+                  <div class="google-actions-intro">
+                    <div class="google-actions-icon" aria-hidden="true">
+                      <svg width="25" height="25" viewBox="0 0 24 24" fill="none"><path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.7"/></svg>
+                    </div>
+                    <strong id="googlePointTitle">Selecione um polo</strong>
+                    <p id="googlePointMessage">Clique em um círculo, no ranking ou em qualquer ponto do mapa.</p>
+                  </div>
+                  <div class="google-link-grid">
+                    <a id="googleSatelliteLink" class="google-link disabled" aria-disabled="true" target="_blank" rel="noopener noreferrer">
+                      <span class="google-link-icon" aria-hidden="true">◫</span>
+                      <span><strong>Imagem aérea Google</strong><span>Abrir o satélite em alta aproximação</span></span>
+                      <span class="google-link-arrow" aria-hidden="true">↗</span>
+                    </a>
+                    <a id="streetViewLink" class="google-link disabled" aria-disabled="true" target="_blank" rel="noopener noreferrer">
+                      <span class="google-link-icon" aria-hidden="true">♙</span>
+                      <span><strong>Street View Google</strong><span>Abrir o panorama mais próximo</span></span>
+                      <span class="google-link-arrow" aria-hidden="true">↗</span>
+                    </a>
+                  </div>
+                  <div class="no-key-note">Os links usam o formato oficial Google Maps URLs, que não requer chave de API.</div>
+                </div>
+              </div>
+            </article>
+          </div>
+          <aside id="kmPanel" class="card km-panel" hidden aria-label="Rankings espaciais de acidentes">
+            <header class="km-panel-head"><div class="eyebrow">POLOS PRIORITÁRIOS</div><h2 id="rankingPeriod">Todo o período</h2><p id="rankingContext">Agrupamento somente por coordenadas.</p><div class="km-totals"><span><strong id="rankTotal">0</strong> acidentes</span><span><strong id="rankDeaths">0</strong> mortos</span><span><strong id="rankSerious">0</strong> graves</span></div></header>
+            <div class="km-panel-body">
+              <section class="km-ranking"><div class="km-ranking-title"><h3><i class="rank-key accident-key">A</i> Top 5 · acidentes</h3><span>maior quantidade</span></div><div id="topAccidents" class="km-list"></div></section>
+              <section class="km-ranking"><div class="km-ranking-title"><h3><i class="rank-key severe-key">S</i> Top 5 · severidade</h3><span>mortos ↓ · graves ↓</span></div><div id="topSeverity" class="km-list"></div></section>
+              <section class="km-ranking"><div class="km-ranking-title"><h3>Top 5 · mortes</h3><span>M · mortos ↓, graves ↓, acidentes ↓</span></div><div id="topDeaths" class="km-list"></div></section>
+              <section class="km-ranking"><div class="km-ranking-title"><h3>Top 5 · feridos graves</h3><span>G · graves ↓, mortos ↓, acidentes ↓</span></div><div id="topSerious" class="km-list"></div></section>
+              <label class="field-note" for="highlightMetric">Destaques no mapa e na animação</label>
+              <select id="highlightMetric" class="select"><option value="severe">A + S · acidentes e severidade combinada</option><option value="deaths">A + M · acidentes e mortes</option><option value="serious">A + G · acidentes e feridos graves</option></select>
+              <p id="rankCoverage" class="rank-footnote"></p>
+              <p class="rank-footnote">Clique no <strong>polo ↗</strong> para abrir o Google Street View na posição exibida no mapa. Com o alinhamento ativado, essa posição é projetada sobre o eixo rodoviário. A referência de BR/km vem do registro mais próximo do centróide; ela não participa do agrupamento e pode conter erro de anotação. A imagem depende da cobertura do Google e não corresponde à data do acidente.</p>
+<details class="method-details"><summary>Critérios e limites da análise</summary><p>Somente latitude e longitude determinam o agrupamento. Escolha células fixas ou DBSCAN por proximidade. No DBSCAN, uma ocorrência central precisa ter o mínimo escolhido dentro do raio, incluindo ela própria. Vizinhanças centrais conectadas formam polos e incorporam pontos de borda. Um ponto de borda compartilhado é atribuído ao primeiro polo na ordem de coordenadas. O raio não limita a extensão total: polos podem se alongar, unir curvas ou vias paralelas próximas. Não usamos distância percorrida pela rodovia.</p><p>Acidentes: quantidade decrescente, depois mortos, graves e coordenadas. Severidade e mortes: mortos decrescentes, depois graves, acidentes e coordenadas. Feridos graves: graves decrescentes, depois mortos, acidentes e coordenadas. Mortes e graves têm listas independentes; somente polos com vítimas do respectivo indicador entram. Cada lista tem no máximo cinco posições. A = acidentes, S = combinado, M = mortes, G = graves. O seletor de destaques determina qual ranking acompanha A no mapa.</p><p>O km do banco é apenas um rótulo indicativo; não são segmentos medidos de 1 km. A BR restringe a amostra pelo filtro, mas não separa grupos. Coordenadas ocultas permanecem no banco e no total filtrado, fora dos polos e rankings. Pontos sem densidade suficiente também ficam fora dos rankings. São frequências, não taxas de risco por tráfego.</p><p>A animação respeita BR, causa, tipo, classificação e severidade. Cada balanço acumula janeiro a dezembro do próprio ano; a Síntese reúne todo o período. Nos balanços e na Síntese, o mapa exibe apenas os destaques escolhidos. O histórico mantém fixo o grupo selecionado e distribui suas ocorrências por ano, respeitando o recorte atual. Para comparar todos os anos, use o modo estático sem filtro de ano ou a Síntese.</p></details>
+            </div>
+          </aside>
+        </section>
+        <section class="card priority-panel" aria-label="Matriz de prioridade">
+          <div class="section-title"><h2>Matriz de prioridade</h2><span>frequência · severidade · persistência</span></div>
+          <p class="field-note">Severidade nesta matriz: total de mortos + feridos graves, sem ponderação entre eles. O indicador representa o total de vítimas, não a gravidade média por acidente.</p>
+          <p id="priorityContext" class="field-note"></p>
+          <div id="priorityMatrix" class="priority-grid"></div>
+          <details class="method-details"><summary>Como interpretar</summary><p>A frequência é alta quando alcança a mediana de acidentes dos polos. A severidade é alta quando mortos + feridos graves alcançam a mediana positiva dessa soma. A soma não atribui pesos de gravidade: mortes e graves permanecem discriminados. Persistência é a proporção de anos do recorte em que o grupo atingiu o mínimo de ocorrências, mantendo os grupos do recorte fixos. Em recorte de um só ano, a persistência não é classificada. São critérios exploratórios relativos ao recorte, não taxas de risco nem prioridade automática de intervenção.</p></details>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="dados.js"></script>
+  <script>
+    // CRITÉRIOS-PADRÃO EDITÁVEIS — também podem ser alterados pelos controles da tela.
+    const CLUSTER_DEFAULTS = {
+      scaleMeters: 500,
+      minOccurrences: 5
+    };
+
+    // Base de dados: arquivo dados.js, gerado por analise_capitulo_e_painel.R (não editar manualmente)
+    const DATA = window.DATA;
+    if (!DATA || !Array.isArray(DATA.rows)) {
+      document.body.innerHTML = '<p style="font:16px sans-serif;padding:40px">Não foi possível carregar o arquivo <b>dados.js</b>. Verifique se ele está na mesma pasta de index.html.</p>';
+      throw new Error("dados.js ausente ou inválido");
+    }
+
+    const ROAD_REFERENCE = {"source":"SNV/DNIT via Observatório de Infraestrutura de MG","version":"202308A","retrieved":"2026-09-03","url":"https://observatorio.infraestrutura.mg.gov.br/server/rest/services/Hosted/Rodovias_DNIT/FeatureServer/0","bbox":[-44.43,-20.12,-44.02,-19.89],"features":[{"br":262,"code":"262BMG0630","paths":[[[-44.018644,-19.952471],[-44.022247,-19.954154],[-44.024825,-19.955339],[-44.025499,-19.955691],[-44.026098,-19.955953],[-44.026225,-19.955984]]]},{"br":262,"code":"262BMG0640","paths":[[[-44.026225,-19.955984],[-44.033712,-19.959435],[-44.034962,-19.960026],[-44.036351,-19.960655],[-44.036821,-19.960847],[-44.037645,-19.961221],[-44.03797,-19.961385],[-44.038625,-19.961685],[-44.039236,-19.962003],[-44.042954,-19.963719],[-44.043565,-19.963952],[-44.044069,-19.964084],[-44.04474,-19.964182],[-44.045059,-19.96421],[-44.045368,-19.96422],[-44.045835,-19.964191],[-44.046441,-19.964079],[-44.047016,-19.963926],[-44.047437,-19.963774],[-44.048833,-19.962953],[-44.052279,-19.960423],[-44.054299,-19.959036],[-44.05497,-19.958602],[-44.055359,-19.958408],[-44.055873,-19.958212],[-44.056287,-19.958105],[-44.056851,-19.958033],[-44.057294,-19.958016],[-44.058065,-19.95808],[-44.058829,-19.958188],[-44.059426,-19.958296],[-44.061546,-19.958596],[-44.063483,-19.958861],[-44.063976,-19.958904],[-44.065001,-19.958911],[-44.065202,-19.95889],[-44.06538,-19.958906],[-44.066689,-19.958907],[-44.072121,-19.958893],[-44.072692,-19.958876],[-44.073088,-19.958889],[-44.073694,-19.95886],[-44.074098,-19.958815],[-44.074503,-19.958744],[-44.07489,-19.958656],[-44.07526,-19.958548],[-44.075631,-19.958417],[-44.076551,-19.95808],[-44.07692,-19.957929],[-44.077113,-19.957883],[-44.077688,-19.957665],[-44.078255,-19.957504],[-44.078831,-19.957466],[-44.07923,-19.957549],[-44.07942,-19.957614],[-44.0796,-19.957702],[-44.07977,-19.957808],[-44.080207,-19.958183],[-44.081002,-19.959],[-44.081302,-19.959232],[-44.081637,-19.959415],[-44.081994,-19.959528],[-44.082341,-19.959587],[-44.082675,-19.959604],[-44.083539,-19.95959],[-44.085035,-19.959555],[-44.086423,-19.959483],[-44.089812,-19.959166],[-44.090228,-19.959083],[-44.090497,-19.958991],[-44.090883,-19.958793],[-44.094016,-19.956698],[-44.094228,-19.956589],[-44.094825,-19.956203],[-44.095147,-19.956024],[-44.095518,-19.955851],[-44.095792,-19.955748],[-44.096239,-19.955625],[-44.09655,-19.955573],[-44.096866,-19.955542],[-44.097342,-19.955533],[-44.097822,-19.955559],[-44.103388,-19.956067],[-44.104043,-19.956104],[-44.10437,-19.956108],[-44.105202,-19.95607],[-44.11068,-19.955732],[-44.111034,-19.955732],[-44.111247,-19.955687],[-44.112236,-19.955617],[-44.115817,-19.955319],[-44.116599,-19.955261],[-44.116911,-19.955267],[-44.117226,-19.955319],[-44.11738,-19.955365],[-44.117672,-19.955495],[-44.117943,-19.955671],[-44.118196,-19.955882],[-44.119452,-19.957058],[-44.119734,-19.957288],[-44.119886,-19.957388],[-44.120047,-19.957476],[-44.120388,-19.957618],[-44.120738,-19.957702],[-44.121091,-19.957734],[-44.121438,-19.95772],[-44.121957,-19.957626],[-44.124861,-19.956926],[-44.126051,-19.956625],[-44.126475,-19.95654],[-44.127107,-19.956368],[-44.128909,-19.95594],[-44.129485,-19.95584],[-44.13008,-19.955782],[-44.130489,-19.95576],[-44.131112,-19.955765],[-44.131726,-19.955813],[-44.136838,-19.956545],[-44.137409,-19.956606],[-44.138196,-19.956645],[-44.138787,-19.956643],[-44.139564,-19.95659],[-44.144766,-19.95594],[-44.145314,-19.955886],[-44.145689,-19.955871],[-44.146068,-19.955868],[-44.146647,-19.95589],[-44.147036,-19.95592],[-44.147602,-19.955997],[-44.147973,-19.956061],[-44.148342,-19.956144],[-44.149331,-19.956427]]]},{"br":262,"code":"262BMG0645","paths":[[[-44.149331,-19.956427],[-44.149931,-19.956662],[-44.150121,-19.95669],[-44.150587,-19.956857],[-44.151022,-19.957044],[-44.151579,-19.95735],[-44.151972,-19.95761],[-44.152475,-19.958003],[-44.15365,-19.959066],[-44.154093,-19.959428],[-44.154418,-19.959639],[-44.154592,-19.959732],[-44.154772,-19.959817],[-44.155151,-19.959955],[-44.155739,-19.960137],[-44.156306,-19.960281],[-44.156485,-19.960345],[-44.156662,-19.960379],[-44.157661,-19.960639],[-44.158156,-19.960784],[-44.160013,-19.961271],[-44.161367,-19.961601],[-44.16919,-19.963698],[-44.175934,-19.965475],[-44.178273,-19.966111],[-44.178561,-19.966209],[-44.178697,-19.966274],[-44.178952,-19.966436],[-44.179068,-19.966533],[-44.179274,-19.966757],[-44.180341,-19.968058],[-44.180584,-19.968329],[-44.180651,-19.968433],[-44.18498,-19.973663],[-44.185186,-19.973871],[-44.185419,-19.974056],[-44.185674,-19.974219],[-44.185951,-19.974357],[-44.186245,-19.974463],[-44.186556,-19.974542],[-44.187041,-19.974611],[-44.1897,-19.974872],[-44.191577,-19.975014],[-44.19184,-19.975055],[-44.194139,-19.975269],[-44.197925,-19.975648],[-44.198084,-19.975671],[-44.198395,-19.975745],[-44.198539,-19.975794],[-44.198805,-19.975915],[-44.199048,-19.976068],[-44.199165,-19.976158],[-44.199384,-19.97637],[-44.199572,-19.976614],[-44.199719,-19.976881],[-44.199861,-19.977313],[-44.200108,-19.978407],[-44.200228,-19.97888],[-44.200446,-19.979514],[-44.200969,-19.980781],[-44.203314,-19.985857]]]},{"br":262,"code":"262BMG0650","paths":[[[-44.203314,-19.985857],[-44.203364,-19.985749],[-44.203444,-19.985657],[-44.203677,-19.985512],[-44.20432,-19.985254],[-44.205569,-19.984797],[-44.207612,-19.983987],[-44.208153,-19.983742],[-44.208512,-19.983542],[-44.208866,-19.983313],[-44.2092,-19.983063],[-44.210433,-19.981987],[-44.211057,-19.981424],[-44.211525,-19.981037],[-44.211854,-19.980807],[-44.21203,-19.980703],[-44.212399,-19.980519],[-44.21279,-19.980376],[-44.213192,-19.98026],[-44.219651,-19.978531],[-44.220452,-19.978335],[-44.220857,-19.978276],[-44.221062,-19.97826],[-44.221471,-19.978263],[-44.221876,-19.978315],[-44.222268,-19.978416],[-44.222647,-19.978549],[-44.223209,-19.978774],[-44.226539,-19.980184],[-44.227327,-19.980491],[-44.230869,-19.981986],[-44.231075,-19.98209],[-44.231471,-19.982235],[-44.232272,-19.982492],[-44.232786,-19.982673],[-44.233942,-19.982954],[-44.238299,-19.983877],[-44.239901,-19.984198],[-44.240462,-19.984253],[-44.240854,-19.984261],[-44.241465,-19.984223],[-44.241883,-19.984162],[-44.242515,-19.984017],[-44.242927,-19.98388],[-44.24332,-19.983722],[-44.25743,-19.976492],[-44.260061,-19.975136],[-44.260935,-19.974658],[-44.263135,-19.973534],[-44.263342,-19.973433],[-44.263672,-19.973298],[-44.264243,-19.973117],[-44.26477,-19.973],[-44.265324,-19.972929],[-44.265805,-19.972901],[-44.266316,-19.972922],[-44.266979,-19.97304],[-44.267439,-19.973144],[-44.267771,-19.973249],[-44.268852,-19.973635],[-44.269417,-19.973786],[-44.269798,-19.973854],[-44.270179,-19.973895],[-44.270749,-19.973919],[-44.271087,-19.973904],[-44.272214,-19.973723],[-44.272755,-19.973654],[-44.273308,-19.973566],[-44.274684,-19.973334],[-44.27542,-19.973192],[-44.277595,-19.972837],[-44.277978,-19.972795],[-44.278624,-19.972693],[-44.283344,-19.971913],[-44.286573,-19.971353],[-44.291452,-19.97055],[-44.292168,-19.970436],[-44.292481,-19.970402],[-44.293035,-19.97038],[-44.293618,-19.970417],[-44.294202,-19.970505],[-44.294805,-19.970655],[-44.295292,-19.970822],[-44.29596,-19.971092],[-44.300948,-19.972883],[-44.301694,-19.973127],[-44.302265,-19.973337],[-44.302473,-19.973398],[-44.30271,-19.973442],[-44.30296,-19.973452],[-44.303228,-19.97341],[-44.303366,-19.973369],[-44.30364,-19.973246],[-44.304355,-19.972841],[-44.304802,-19.972614],[-44.305118,-19.972483],[-44.305622,-19.972311],[-44.306168,-19.972178],[-44.30655,-19.972113],[-44.307138,-19.972065],[-44.307537,-19.972065],[-44.308141,-19.972116],[-44.309914,-19.972381],[-44.311629,-19.97268],[-44.314441,-19.973101],[-44.315068,-19.973175],[-44.315533,-19.973266],[-44.31633,-19.973393],[-44.324181,-19.974605],[-44.324814,-19.974661],[-44.325215,-19.974659],[-44.325616,-19.97463],[-44.32622,-19.974542],[-44.32661,-19.974456],[-44.32716,-19.974284],[-44.327504,-19.974139],[-44.32799,-19.97389],[-44.328449,-19.973606],[-44.328876,-19.973285],[-44.329282,-19.972909],[-44.329539,-19.972628],[-44.329901,-19.972175],[-44.330118,-19.97185],[-44.332239,-19.968412],[-44.332599,-19.967812],[-44.33282,-19.967411],[-44.333096,-19.966809],[-44.333249,-19.966407],[-44.33338,-19.965999],[-44.333654,-19.964969],[-44.333872,-19.964368],[-44.334056,-19.963971],[-44.334259,-19.963578],[-44.334487,-19.9632],[-44.334734,-19.962843],[-44.335135,-19.962337],[-44.335745,-19.961658],[-44.335953,-19.961379],[-44.336235,-19.961087],[-44.336619,-19.960761],[-44.33687,-19.960584],[-44.337163,-19.960402],[-44.337574,-19.960181],[-44.337887,-19.959992],[-44.339537,-19.959065]]]},{"br":262,"code":"262BMG0670","paths":[[[-44.339537,-19.959065],[-44.341058,-19.958251],[-44.341908,-19.957746],[-44.34231,-19.957548],[-44.34352,-19.956884],[-44.343918,-19.956695],[-44.344169,-19.956613],[-44.344574,-19.956557],[-44.345399,-19.956526],[-44.345721,-19.956492],[-44.346235,-19.956505],[-44.349578,-19.956418],[-44.350043,-19.956401],[-44.350476,-19.956364],[-44.351109,-19.956346],[-44.352078,-19.956336],[-44.352813,-19.956389],[-44.353367,-19.956495],[-44.353946,-19.956662],[-44.354496,-19.956879],[-44.354904,-19.957081],[-44.356079,-19.957801],[-44.356624,-19.958093],[-44.357221,-19.958335],[-44.357537,-19.958437],[-44.357864,-19.95852],[-44.358198,-19.958585],[-44.358543,-19.958634],[-44.359078,-19.958672],[-44.359439,-19.958668],[-44.359789,-19.958644],[-44.36041,-19.958554],[-44.360898,-19.958436],[-44.361236,-19.958331],[-44.361684,-19.958154],[-44.362379,-19.957833],[-44.364099,-19.956926],[-44.366618,-19.955564],[-44.371152,-19.953187],[-44.371693,-19.952928],[-44.372142,-19.95276],[-44.372779,-19.952575],[-44.377305,-19.951434],[-44.377762,-19.951284],[-44.378171,-19.951117],[-44.378538,-19.950934],[-44.378819,-19.950774],[-44.379089,-19.950597],[-44.37945,-19.950322],[-44.379708,-19.950097],[-44.379948,-19.949852],[-44.380163,-19.949615],[-44.380345,-19.949384],[-44.380686,-19.948883],[-44.380873,-19.948551],[-44.382468,-19.945437],[-44.382795,-19.944927],[-44.383179,-19.944453],[-44.389244,-19.938313],[-44.395424,-19.932086],[-44.395965,-19.931561],[-44.396417,-19.931194],[-44.396583,-19.931081],[-44.396934,-19.930876],[-44.397307,-19.93071],[-44.39769,-19.930586],[-44.397883,-19.930539],[-44.398267,-19.930477],[-44.39865,-19.930448],[-44.400164,-19.930438],[-44.400854,-19.930454]]]},{"br":262,"code":"262BMG0685","paths":[[[-44.400854,-19.930454],[-44.401398,-19.930466],[-44.4017,-19.930495],[-44.403448,-19.930543],[-44.409294,-19.930652],[-44.411144,-19.930704],[-44.411901,-19.930783],[-44.41238,-19.930848],[-44.412621,-19.930885],[-44.413787,-19.931128],[-44.41417,-19.931231],[-44.415237,-19.931544],[-44.416893,-19.932089],[-44.418369,-19.932507],[-44.421315,-19.933415],[-44.421638,-19.933489],[-44.421802,-19.933506],[-44.422133,-19.933499],[-44.422298,-19.933469],[-44.422458,-19.93342],[-44.422611,-19.933354],[-44.422755,-19.933271],[-44.423013,-19.933059],[-44.423128,-19.932935],[-44.423542,-19.932386],[-44.423758,-19.932122],[-44.423874,-19.932007],[-44.424001,-19.931909],[-44.424141,-19.931827],[-44.424442,-19.931707],[-44.424904,-19.931585],[-44.4252,-19.931536],[-44.425344,-19.931532],[-44.425489,-19.931547],[-44.42563,-19.931586],[-44.425768,-19.931643],[-44.425895,-19.93171],[-44.426139,-19.931873],[-44.427752,-19.933201],[-44.428037,-19.93341],[-44.428287,-19.933641],[-44.428392,-19.933766],[-44.428481,-19.933899],[-44.428548,-19.934041],[-44.428628,-19.934348],[-44.428854,-19.936032],[-44.428942,-19.936539],[-44.428989,-19.9367],[-44.429059,-19.936848],[-44.42915,-19.936973],[-44.429267,-19.937079],[-44.429396,-19.937162],[-44.429544,-19.937226],[-44.429697,-19.937271],[-44.429857,-19.937291],[-44.430015,-19.937281],[-44.430173,-19.937251],[-44.430492,-19.937164],[-44.432393,-19.936616],[-44.432748,-19.936501],[-44.432909,-19.936431],[-44.433057,-19.936342],[-44.433184,-19.936232],[-44.433289,-19.936101],[-44.433385,-19.935962],[-44.433805,-19.935242],[-44.434005,-19.934996],[-44.434126,-19.934896],[-44.434264,-19.934819],[-44.434414,-19.934764],[-44.434573,-19.93473],[-44.434739,-19.934718],[-44.435077,-19.934751],[-44.435421,-19.934818],[-44.435766,-19.934904],[-44.435934,-19.934966],[-44.436256,-19.935127],[-44.437284,-19.935798],[-44.437432,-19.935878],[-44.437585,-19.935939],[-44.437741,-19.935978],[-44.437896,-19.935995],[-44.438049,-19.935991],[-44.438509,-19.935907],[-44.438983,-19.935768],[-44.439492,-19.93559],[-44.439854,-19.935493],[-44.440037,-19.935459],[-44.440221,-19.935438],[-44.440555,-19.935431],[-44.44076,-19.93544],[-44.440989,-19.935486],[-44.441145,-19.935536],[-44.441813,-19.935846],[-44.444964,-19.937372],[-44.445318,-19.937507],[-44.445491,-19.937548],[-44.445664,-19.937567],[-44.445836,-19.93756],[-44.446004,-19.937524],[-44.446325,-19.93739],[-44.447122,-19.936978],[-44.447467,-19.936855],[-44.447646,-19.936817],[-44.447827,-19.936796],[-44.44801,-19.936792],[-44.448376,-19.936834],[-44.448731,-19.936927],[-44.450353,-19.937462],[-44.450707,-19.937545],[-44.451074,-19.937571],[-44.451262,-19.937561],[-44.451636,-19.937506],[-44.455347,-19.936793],[-44.455532,-19.936741],[-44.455887,-19.936607],[-44.456057,-19.936521],[-44.456387,-19.936318],[-44.456695,-19.936074],[-44.456834,-19.935935],[-44.456959,-19.93579],[-44.457183,-19.935484],[-44.457981,-19.934161],[-44.458895,-19.932592],[-44.459042,-19.9323],[-44.459259,-19.931973],[-44.459554,-19.931478],[-44.463457,-19.924837],[-44.463726,-19.924369],[-44.464036,-19.923783],[-44.464152,-19.923636],[-44.464439,-19.923339],[-44.464612,-19.923201],[-44.464816,-19.923073],[-44.465054,-19.92296],[-44.465185,-19.922914],[-44.46605,-19.922706],[-44.466345,-19.922598],[-44.466491,-19.922529],[-44.466776,-19.922356],[-44.468286,-19.921305],[-44.468597,-19.92115],[-44.468764,-19.921095],[-44.468936,-19.921059],[-44.469114,-19.921045],[-44.469478,-19.921067],[-44.474053,-19.921652],[-44.474403,-19.921657],[-44.474574,-19.921641],[-44.474904,-19.921568],[-44.475221,-19.921454],[-44.475508,-19.921318],[-44.475902,-19.921088],[-44.476256,-19.920927],[-44.481435,-19.918192],[-44.481792,-19.918027],[-44.48215,-19.91792],[-44.482508,-19.91788],[-44.482857,-19.917887],[-44.483025,-19.917913],[-44.483342,-19.918001],[-44.484063,-19.918317],[-44.484445,-19.91856],[-44.485004,-19.918861],[-44.485491,-19.919062],[-44.48609,-19.919246],[-44.486585,-19.919352],[-44.486921,-19.919398],[-44.487439,-19.919432],[-44.487797,-19.919428],[-44.488162,-19.919406],[-44.488522,-19.919362],[-44.488879,-19.919292],[-44.4894,-19.919155],[-44.494783,-19.917399],[-44.495128,-19.917253],[-44.495287,-19.917162],[-44.495585,-19.916948],[-44.495722,-19.916824],[-44.496087,-19.916409],[-44.497155,-19.915084],[-44.497412,-19.914826],[-44.497702,-19.914612],[-44.498023,-19.914458],[-44.498774,-19.914214],[-44.50003,-19.913879],[-44.500769,-19.913708],[-44.501359,-19.913551],[-44.501825,-19.913397],[-44.502121,-19.913264],[-44.502404,-19.913092],[-44.502948,-19.91266],[-44.505007,-19.910831],[-44.505699,-19.910138],[-44.506192,-19.909744],[-44.5065,-19.909531],[-44.506744,-19.909397],[-44.507015,-19.909287],[-44.507496,-19.909143],[-44.507735,-19.909056],[-44.508091,-19.908956],[-44.508428,-19.908815],[-44.508821,-19.90862],[-44.509848,-19.908014],[-44.510367,-19.907685],[-44.511506,-19.906999],[-44.512614,-19.906369],[-44.517349,-19.903543],[-44.517878,-19.903258],[-44.518246,-19.90311],[-44.518436,-19.903052],[-44.518825,-19.902976],[-44.519227,-19.902943],[-44.51964,-19.902938],[-44.525279,-19.90301],[-44.526185,-19.902992],[-44.526426,-19.903017],[-44.527052,-19.903034],[-44.535913,-19.903133],[-44.536129,-19.903148],[-44.536601,-19.903138],[-44.54181,-19.903197],[-44.542464,-19.903165],[-44.543108,-19.903067],[-44.543737,-19.90291],[-44.544973,-19.902547],[-44.5471,-19.901883],[-44.547567,-19.901775],[-44.554284,-19.899773],[-44.555505,-19.899401],[-44.556423,-19.899093],[-44.557525,-19.898775],[-44.558032,-19.898613],[-44.558313,-19.898559],[-44.559188,-19.898303],[-44.570316,-19.894974],[-44.576966,-19.893014],[-44.578907,-19.892407],[-44.579427,-19.892278],[-44.579872,-19.89215],[-44.590667,-19.888947],[-44.594408,-19.887854],[-44.595415,-19.887549],[-44.596275,-19.887269],[-44.596962,-19.887097],[-44.600094,-19.88617],[-44.600651,-19.885985],[-44.60134,-19.88571],[-44.603442,-19.884796],[-44.605067,-19.88406]]]},{"br":381,"code":"381CMG3005","paths":[[[-44.149331,-19.956427],[-44.149792,-19.957428],[-44.150436,-19.958064],[-44.155218,-19.961586],[-44.156451,-19.962433],[-44.158019,-19.963797],[-44.158807,-19.965197],[-44.159411,-19.96647],[-44.15979,-19.967725],[-44.160046,-19.969229],[-44.160259,-19.970826],[-44.160426,-19.972961],[-44.160492,-19.974165],[-44.160389,-19.976491],[-44.160327,-19.978461],[-44.160533,-19.979458]]]},{"br":381,"code":"381BMG0460","paths":[[[-44.018644,-19.952471],[-44.022247,-19.954154],[-44.024825,-19.955339],[-44.025499,-19.955691],[-44.026098,-19.955953],[-44.026225,-19.955984]]]},{"br":381,"code":"381BMG0470","paths":[[[-44.026225,-19.955984],[-44.033712,-19.959435],[-44.034962,-19.960026],[-44.036351,-19.960655],[-44.036821,-19.960847],[-44.037645,-19.961221],[-44.03797,-19.961385],[-44.038625,-19.961685],[-44.039236,-19.962003],[-44.042954,-19.963719],[-44.043565,-19.963952],[-44.044069,-19.964084],[-44.04474,-19.964182],[-44.045059,-19.96421],[-44.045368,-19.96422],[-44.045835,-19.964191],[-44.046441,-19.964079],[-44.047016,-19.963926],[-44.047437,-19.963774],[-44.048833,-19.962953],[-44.052279,-19.960423],[-44.054299,-19.959036],[-44.05497,-19.958602],[-44.055359,-19.958408],[-44.055873,-19.958212],[-44.056287,-19.958105],[-44.056851,-19.958033],[-44.057294,-19.958016],[-44.058065,-19.95808],[-44.058829,-19.958188],[-44.059426,-19.958296],[-44.061546,-19.958596],[-44.063483,-19.958861],[-44.063976,-19.958904],[-44.065001,-19.958911],[-44.065202,-19.95889],[-44.06538,-19.958906],[-44.066689,-19.958907],[-44.072121,-19.958893],[-44.072692,-19.958876],[-44.073088,-19.958889],[-44.073694,-19.95886],[-44.074098,-19.958815],[-44.074503,-19.958744],[-44.07489,-19.958656],[-44.07526,-19.958548],[-44.075631,-19.958417],[-44.076551,-19.95808],[-44.07692,-19.957929],[-44.077113,-19.957883],[-44.077688,-19.957665],[-44.078255,-19.957504],[-44.078831,-19.957466],[-44.07923,-19.957549],[-44.07942,-19.957614],[-44.0796,-19.957702],[-44.07977,-19.957808],[-44.080207,-19.958183],[-44.081002,-19.959],[-44.081302,-19.959232],[-44.081637,-19.959415],[-44.081994,-19.959528],[-44.082341,-19.959587],[-44.082675,-19.959604],[-44.083539,-19.95959],[-44.085035,-19.959555],[-44.086423,-19.959483],[-44.089812,-19.959166],[-44.090228,-19.959083],[-44.090497,-19.958991],[-44.090883,-19.958793],[-44.094016,-19.956698],[-44.094228,-19.956589],[-44.094825,-19.956203],[-44.095147,-19.956024],[-44.095518,-19.955851],[-44.095792,-19.955748],[-44.096239,-19.955625],[-44.09655,-19.955573],[-44.096866,-19.955542],[-44.097342,-19.955533],[-44.097822,-19.955559],[-44.103388,-19.956067],[-44.104043,-19.956104],[-44.10437,-19.956108],[-44.105202,-19.95607],[-44.11068,-19.955732],[-44.111034,-19.955732],[-44.111247,-19.955687],[-44.112236,-19.955617],[-44.115817,-19.955319],[-44.116599,-19.955261],[-44.116911,-19.955267],[-44.117226,-19.955319],[-44.11738,-19.955365],[-44.117672,-19.955495],[-44.117943,-19.955671],[-44.118196,-19.955882],[-44.119452,-19.957058],[-44.119734,-19.957288],[-44.119886,-19.957388],[-44.120047,-19.957476],[-44.120388,-19.957618],[-44.120738,-19.957702],[-44.121091,-19.957734],[-44.121438,-19.95772],[-44.121957,-19.957626],[-44.124861,-19.956926],[-44.126051,-19.956625],[-44.126475,-19.95654],[-44.127107,-19.956368],[-44.128909,-19.95594],[-44.129485,-19.95584],[-44.13008,-19.955782],[-44.130489,-19.95576],[-44.131112,-19.955765],[-44.131726,-19.955813],[-44.136838,-19.956545],[-44.137409,-19.956606],[-44.138196,-19.956645],[-44.138787,-19.956643],[-44.139564,-19.95659],[-44.144766,-19.95594],[-44.145314,-19.955886],[-44.145689,-19.955871],[-44.146068,-19.955868],[-44.146647,-19.95589],[-44.147036,-19.95592],[-44.147602,-19.955997],[-44.147973,-19.956061],[-44.148342,-19.956144],[-44.149331,-19.956427]]]},{"br":381,"code":"381CMG3010","paths":[[[-44.160533,-19.979458],[-44.161022,-19.980217],[-44.161547,-19.98067],[-44.163212,-19.981904],[-44.166103,-19.984014],[-44.167573,-19.985115],[-44.168714,-19.985922],[-44.169183,-19.986217],[-44.169534,-19.986387],[-44.170052,-19.986537],[-44.170349,-19.986591],[-44.170753,-19.98663],[-44.175033,-19.986788],[-44.176071,-19.98679],[-44.177654,-19.986845]]]},{"br":381,"code":"381CMG3015","paths":[[[-44.177654,-19.986845],[-44.178877,-19.986901],[-44.182139,-19.98701],[-44.182743,-19.987046],[-44.183444,-19.987121],[-44.184336,-19.987282],[-44.184614,-19.987351],[-44.1849,-19.987448],[-44.187653,-19.988699],[-44.189574,-19.989532],[-44.190146,-19.989707],[-44.190487,-19.989796],[-44.190766,-19.989849],[-44.191309,-19.989913],[-44.191637,-19.989936],[-44.192029,-19.989933],[-44.192405,-19.989914],[-44.192948,-19.989836],[-44.193754,-19.989633],[-44.19416,-19.989502],[-44.194644,-19.989306],[-44.195158,-19.988876],[-44.196596,-19.988104],[-44.197016,-19.987891],[-44.197268,-19.987784],[-44.197479,-19.987708],[-44.19815,-19.987521],[-44.198439,-19.987413],[-44.199212,-19.987166],[-44.200232,-19.986868],[-44.200772,-19.986688],[-44.201203,-19.986535],[-44.202043,-19.986208],[-44.202804,-19.985878],[-44.203314,-19.985857]]]},{"br":381,"code":"381BMG0480","paths":[[[-44.149331,-19.956427],[-44.149931,-19.956662],[-44.150121,-19.95669],[-44.150587,-19.956857],[-44.151022,-19.957044],[-44.151579,-19.95735],[-44.151972,-19.95761],[-44.152475,-19.958003],[-44.15365,-19.959066],[-44.154093,-19.959428],[-44.154418,-19.959639],[-44.154592,-19.959732],[-44.154772,-19.959817],[-44.155151,-19.959955],[-44.155739,-19.960137],[-44.156306,-19.960281],[-44.156485,-19.960345],[-44.156662,-19.960379],[-44.157661,-19.960639],[-44.158156,-19.960784],[-44.160013,-19.961271],[-44.161367,-19.961601],[-44.16919,-19.963698],[-44.175934,-19.965475],[-44.178273,-19.966111],[-44.178561,-19.966209],[-44.178697,-19.966274],[-44.178952,-19.966436],[-44.179068,-19.966533],[-44.179274,-19.966757],[-44.180341,-19.968058],[-44.180584,-19.968329],[-44.180651,-19.968433],[-44.18498,-19.973663],[-44.185186,-19.973871],[-44.185419,-19.974056],[-44.185674,-19.974219],[-44.185951,-19.974357],[-44.186245,-19.974463],[-44.186556,-19.974542],[-44.187041,-19.974611],[-44.1897,-19.974872],[-44.191577,-19.975014],[-44.19184,-19.975055],[-44.194139,-19.975269],[-44.197925,-19.975648],[-44.198084,-19.975671],[-44.198395,-19.975745],[-44.198539,-19.975794],[-44.198805,-19.975915],[-44.199048,-19.976068],[-44.199165,-19.976158],[-44.199384,-19.97637],[-44.199572,-19.976614],[-44.199719,-19.976881],[-44.199861,-19.977313],[-44.200108,-19.978407],[-44.200228,-19.97888],[-44.200446,-19.979514],[-44.200969,-19.980781],[-44.203314,-19.985857]]]},{"br":381,"code":"381BMG0490","paths":[[[-44.203314,-19.985857],[-44.203508,-19.986554],[-44.204318,-19.987881],[-44.204587,-19.988236],[-44.204887,-19.988584],[-44.205965,-19.989609],[-44.206315,-19.989982],[-44.206721,-19.990522],[-44.206986,-19.990953],[-44.20714,-19.991255],[-44.207275,-19.99157],[-44.208307,-19.994255],[-44.208798,-19.995404],[-44.208962,-19.99572],[-44.209266,-19.996172],[-44.209449,-19.996493],[-44.209678,-19.996941],[-44.210239,-19.997876],[-44.210525,-19.998407],[-44.210729,-19.998846],[-44.211042,-19.999625],[-44.212505,-20.002995],[-44.212818,-20.003655],[-44.213006,-20.003974],[-44.213216,-20.00428],[-44.213696,-20.004864],[-44.218268,-20.010055],[-44.219627,-20.011581],[-44.220119,-20.0121],[-44.220666,-20.012847],[-44.222571,-20.015906],[-44.222775,-20.016194],[-44.223007,-20.016456],[-44.22328,-20.016683],[-44.223433,-20.016782],[-44.223762,-20.016956],[-44.225569,-20.017698],[-44.226894,-20.018223],[-44.227309,-20.018413],[-44.227568,-20.018562],[-44.227814,-20.018737],[-44.228144,-20.019049],[-44.228335,-20.019273],[-44.228498,-20.019513],[-44.228638,-20.019771],[-44.22876,-20.020038],[-44.229028,-20.020696],[-44.229663,-20.022471],[-44.229805,-20.022917],[-44.229941,-20.023254],[-44.230076,-20.023536],[-44.230367,-20.024038],[-44.231371,-20.025479],[-44.231627,-20.025821],[-44.231912,-20.026169],[-44.232476,-20.026737],[-44.23285,-20.027063],[-44.23437,-20.028313],[-44.234849,-20.028755],[-44.235186,-20.029113],[-44.236042,-20.030117],[-44.236279,-20.030358],[-44.236532,-20.030589],[-44.237075,-20.031014],[-44.237641,-20.031375],[-44.239065,-20.032216],[-44.240061,-20.032824],[-44.240793,-20.033236],[-44.245321,-20.035902],[-44.245864,-20.036198],[-44.246417,-20.036472],[-44.246962,-20.036725],[-44.247676,-20.037025],[-44.248574,-20.037355],[-44.249306,-20.037589],[-44.250057,-20.037794],[-44.250824,-20.037969],[-44.251579,-20.038114],[-44.252337,-20.038226],[-44.254444,-20.03846],[-44.254993,-20.038558],[-44.255691,-20.038732],[-44.257059,-20.039207],[-44.257695,-20.039439],[-44.25806,-20.03959],[-44.259499,-20.040106],[-44.261658,-20.040856],[-44.266422,-20.042553],[-44.267559,-20.042917],[-44.268136,-20.043149],[-44.272629,-20.044733],[-44.273102,-20.044937],[-44.273394,-20.045107],[-44.273531,-20.045203],[-44.273787,-20.045416],[-44.274015,-20.04565],[-44.27421,-20.045902],[-44.274453,-20.046308],[-44.274786,-20.046999],[-44.274945,-20.04728],[-44.275067,-20.047571],[-44.275249,-20.047892],[-44.275423,-20.048149],[-44.275637,-20.04842],[-44.276011,-20.048787],[-44.276234,-20.048969],[-44.276598,-20.049223],[-44.277022,-20.049438],[-44.27748,-20.049613],[-44.278652,-20.049951],[-44.278996,-20.050065],[-44.279318,-20.050209],[-44.279467,-20.050292],[-44.279741,-20.050479],[-44.280107,-20.050791],[-44.281258,-20.05196],[-44.282235,-20.052878],[-44.283057,-20.053561],[-44.283862,-20.054182],[-44.284295,-20.05457],[-44.285278,-20.05537],[-44.285866,-20.055783],[-44.286335,-20.056156],[-44.287306,-20.057026],[-44.28778,-20.057385],[-44.288363,-20.05788],[-44.289685,-20.058952],[-44.290348,-20.05947],[-44.290533,-20.05963],[-44.291245,-20.060306],[-44.291626,-20.060694],[-44.29194,-20.061042],[-44.292714,-20.062014],[-44.298425,-20.069554]]]},{"br":381,"code":"381BMG0500","paths":[[[-44.298425,-20.069554],[-44.301663,-20.073834],[-44.302117,-20.074384],[-44.302345,-20.074728],[-44.304738,-20.077897],[-44.30494,-20.078118],[-44.305031,-20.07825],[-44.305131,-20.078362],[-44.305483,-20.078729],[-44.305646,-20.078923],[-44.30587,-20.079251],[-44.306394,-20.079951],[-44.312014,-20.087365],[-44.312621,-20.088142],[-44.312916,-20.088579],[-44.313172,-20.089077],[-44.313381,-20.089526],[-44.314238,-20.091616],[-44.314601,-20.092437],[-44.315484,-20.094587],[-44.315838,-20.095487],[-44.31596,-20.095834],[-44.316051,-20.096186],[-44.316183,-20.097083],[-44.316249,-20.097431],[-44.31635,-20.097775],[-44.316424,-20.097942],[-44.316513,-20.098103],[-44.316619,-20.098255],[-44.316742,-20.098396],[-44.317022,-20.098647],[-44.318244,-20.099458],[-44.318528,-20.099661],[-44.318789,-20.099881],[-44.319016,-20.100125],[-44.31911,-20.100256],[-44.319254,-20.100538],[-44.319304,-20.100684],[-44.319372,-20.100981],[-44.319413,-20.101274],[-44.319408,-20.101565],[-44.319244,-20.102355],[-44.319079,-20.102948],[-44.319012,-20.103291],[-44.31899,-20.103508],[-44.319019,-20.103731],[-44.319071,-20.103957],[-44.319157,-20.104174],[-44.319217,-20.104274],[-44.319361,-20.104453],[-44.319525,-20.1046],[-44.319839,-20.104776],[-44.320481,-20.105021],[-44.321399,-20.105317],[-44.321718,-20.105434],[-44.322027,-20.105574],[-44.322173,-20.105655],[-44.322443,-20.105837],[-44.32399,-20.107065],[-44.324325,-20.107277],[-44.324805,-20.107493],[-44.325886,-20.107842],[-44.326108,-20.107943],[-44.326317,-20.108067],[-44.326594,-20.108299],[-44.326817,-20.108581],[-44.326973,-20.1089],[-44.327039,-20.109127],[-44.327073,-20.109359],[-44.327056,-20.109709],[-44.327004,-20.109938],[-44.326921,-20.110159],[-44.326739,-20.11046],[-44.326591,-20.110627],[-44.326303,-20.110862],[-44.326063,-20.110998],[-44.325781,-20.111107],[-44.325458,-20.11117],[-44.325093,-20.111165],[-44.323903,-20.110949],[-44.323267,-20.110881],[-44.32306,-20.110883],[-44.322864,-20.110904],[-44.322114,-20.111071],[-44.321926,-20.111089],[-44.321737,-20.111084],[-44.321546,-20.111061],[-44.320549,-20.11083],[-44.320133,-20.110727],[-44.319716,-20.110597],[-44.319102,-20.110354],[-44.316232,-20.109058],[-44.31551,-20.108754],[-44.315333,-20.108698],[-44.315153,-20.108663],[-44.314973,-20.108657],[-44.314795,-20.108683],[-44.314625,-20.108738],[-44.314467,-20.10882],[-44.314322,-20.108921],[-44.314195,-20.109041],[-44.313625,-20.109697],[-44.313366,-20.109937],[-44.312897,-20.1102],[-44.312262,-20.110503],[-44.311639,-20.110871],[-44.311333,-20.111083],[-44.309804,-20.112259],[-44.309013,-20.112846],[-44.308493,-20.113158],[-44.305779,-20.114556],[-44.305458,-20.114761],[-44.305325,-20.114886],[-44.305103,-20.115163],[-44.304298,-20.116427],[-44.304047,-20.116758],[-44.303864,-20.116949],[-44.303616,-20.117173],[-44.302575,-20.117955],[-44.302467,-20.118058],[-44.302305,-20.118275],[-44.302228,-20.118465],[-44.302203,-20.118569],[-44.30219,-20.118678],[-44.302192,-20.118906],[-44.30244,-20.120269],[-44.302442,-20.120553],[-44.302383,-20.120833],[-44.302327,-20.12097],[-44.302251,-20.121099],[-44.302155,-20.121216],[-44.302039,-20.121318],[-44.301206,-20.121851],[-44.300964,-20.122028],[-44.300865,-20.122129],[-44.300784,-20.122242],[-44.300722,-20.122362],[-44.30068,-20.122487],[-44.300659,-20.122614],[-44.300661,-20.122743],[-44.300683,-20.122871],[-44.300773,-20.123128],[-44.300906,-20.1234],[-44.301527,-20.124388],[-44.302026,-20.125258],[-44.302773,-20.126688],[-44.303004,-20.127214],[-44.303125,-20.127568],[-44.303221,-20.127925],[-44.303839,-20.130924],[-44.303919,-20.131197],[-44.304036,-20.131445],[-44.3041,-20.131545],[-44.304334,-20.131814],[-44.304571,-20.132042],[-44.304656,-20.132107],[-44.30486,-20.132221],[-44.305254,-20.132365],[-44.306389,-20.132654],[-44.306736,-20.132759],[-44.307064,-20.132902],[-44.307835,-20.133358],[-44.308167,-20.133491],[-44.308332,-20.133535],[-44.30849,-20.133559],[-44.309674,-20.133649],[-44.310472,-20.133691],[-44.31108,-20.133768],[-44.311269,-20.133819],[-44.311636,-20.133959],[-44.311983,-20.13415],[-44.312305,-20.134378],[-44.312742,-20.134775],[-44.31378,-20.135834],[-44.314516,-20.13654],[-44.314774,-20.136742],[-44.315101,-20.13697],[-44.315901,-20.137437],[-44.316315,-20.1377],[-44.31659,-20.1379],[-44.316974,-20.138253],[-44.317191,-20.138516],[-44.31747,-20.138947],[-44.317973,-20.139892],[-44.318954,-20.141838],[-44.319334,-20.142514],[-44.319533,-20.14278],[-44.319787,-20.143024],[-44.320073,-20.143256],[-44.321332,-20.144198],[-44.322037,-20.144778],[-44.32226,-20.144986],[-44.322734,-20.145469],[-44.323654,-20.146421],[-44.323829,-20.146619],[-44.323996,-20.146834],[-44.324115,-20.147019],[-44.324168,-20.147127],[-44.324235,-20.147367],[-44.324251,-20.14763],[-44.324185,-20.148308],[-44.324187,-20.148568],[-44.324239,-20.148811],[-44.324348,-20.14903],[-44.324505,-20.149224],[-44.3247,-20.149404],[-44.325684,-20.150024],[-44.325844,-20.15014],[-44.326003,-20.150284],[-44.326203,-20.150539],[-44.326257,-20.150811],[-44.326247,-20.151125],[-44.326183,-20.15142],[-44.326048,-20.151844],[-44.325994,-20.152078],[-44.325965,-20.152326],[-44.325993,-20.152588],[-44.326079,-20.152848],[-44.326608,-20.154108],[-44.326874,-20.154903],[-44.327167,-20.155865],[-44.327299,-20.156159],[-44.327385,-20.156297],[-44.327486,-20.156422],[-44.327602,-20.156531],[-44.327733,-20.156627],[-44.328033,-20.156784],[-44.328849,-20.157154],[-44.329157,-20.157347],[-44.32929,-20.157464],[-44.329408,-20.157598],[-44.32951,-20.157746],[-44.329593,-20.157905],[-44.329656,-20.158074],[-44.329727,-20.158429],[-44.329781,-20.159349],[-44.329866,-20.16151],[-44.329912,-20.162378],[-44.329973,-20.162847],[-44.330052,-20.16314],[-44.330112,-20.163277],[-44.330189,-20.163404],[-44.330377,-20.163634],[-44.330859,-20.164163],[-44.330944,-20.164279],[-44.331092,-20.16454],[-44.331183,-20.164824],[-44.33132,-20.165413],[-44.331405,-20.165703],[-44.331525,-20.165975],[-44.331602,-20.166102],[-44.331871,-20.166457],[-44.332268,-20.16691],[-44.332466,-20.167118],[-44.332677,-20.167295],[-44.332792,-20.167367],[-44.333044,-20.167466],[-44.33333,-20.167505],[-44.333618,-20.167475],[-44.333756,-20.167434],[-44.333886,-20.167375],[-44.334118,-20.167209],[-44.334223,-20.167107],[-44.334513,-20.166761],[-44.335117,-20.165982],[-44.335545,-20.165463],[-44.335785,-20.165213],[-44.336057,-20.164991],[-44.336207,-20.164895],[-44.336537,-20.164735],[-44.337982,-20.164201],[-44.339056,-20.163835],[-44.339365,-20.163698],[-44.339511,-20.16361],[-44.339645,-20.163503],[-44.339873,-20.163252],[-44.340071,-20.162963],[-44.340388,-20.162431],[-44.340527,-20.16225],[-44.340636,-20.16214],[-44.340924,-20.16197],[-44.342018,-20.161528],[-44.342481,-20.161432],[-44.342639,-20.161427],[-44.342953,-20.161458],[-44.343967,-20.161666],[-44.346199,-20.162189],[-44.346757,-20.162283],[-44.346957,-20.162289],[-44.347179,-20.162273],[-44.347928,-20.162161]]]}]};
+
+    const R = Object.freeze({
+      LAT: 0, LON: 1, YEAR: 2, CAUSE: 3, TYPE: 4, CLASS: 5, SEVERITY: 6,
+      ID: 7, DATE: 8, MUNICIPALITY: 9, BR: 10, KM: 11, DEATHS: 12,
+      SERIOUS: 13, LIGHT: 14
+    });
+
+    const ROADS = [...new Set(DATA.rows.map(row => row[R.BR]).filter(Number.isFinite))].sort((a, b) => a - b);
+
+    const numberBR = new Intl.NumberFormat("pt-BR");
+    const percentBR = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 });
+
+    const state = {
+      map: null,
+      mapReady: false,
+      filteredRows: DATA.rows,
+      clusters: [],
+      visibleClusters: [],
+      layers: [],
+      selectedKey: null,
+      centroidMarker: null
+    };
+
+    const $ = id => document.getElementById(id);
+    function setText(id, value) { $(id).textContent = value; }
+
+    function populateSelect(id, values, allLabel, formatter = value => value) {
+      const select = $(id);
+      const fragment = document.createDocumentFragment();
+      const all = document.createElement("option");
+      all.value = "";
+      all.textContent = allLabel;
+      fragment.appendChild(all);
+      values.forEach((value, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = formatter(value);
+        fragment.appendChild(option);
+      });
+      select.replaceChildren(fragment);
+    }
+
+    function initialiseControls() {
+      populateSelect("yearFilter", DATA.years, "Todos os anos");
+      populateSelect("roadFilter", ROADS, "Todas as BRs", value => `BR-${String(value).padStart(3, "0")}`);
+      populateSelect("causeFilter", DATA.causes, "Todas as causas");
+      populateSelect("typeFilter", DATA.types, "Todos os tipos");
+      populateSelect("classFilter", DATA.classes, "Todas as classificações");
+      populateSelect("severityFilter", DATA.severities, "Todas as severidades");
+      $("scaleRange").value = CLUSTER_DEFAULTS.scaleMeters;
+      $("scaleNumber").value = CLUSTER_DEFAULTS.scaleMeters;
+      $("minimumRange").value = CLUSTER_DEFAULTS.minOccurrences;
+      $("minimumNumber").value = CLUSTER_DEFAULTS.minOccurrences;
+      setText("sourceLine", `Análise de concentração · ${DATA.meta.source} · ${numberBR.format(DATA.meta.total)} registros`);
+
+      ["yearFilter", "roadFilter", "causeFilter", "typeFilter", "classFilter", "severityFilter", "showMinor"].forEach(id => {
+        $(id).addEventListener("change", updateAnalysis);
+      });
+      bindPairedInputs("scaleRange", "scaleNumber", updateAnalysis);
+      bindPairedInputs("minimumRange", "minimumNumber", updateAnalysis);
+      $("resetFilters").addEventListener("click", resetFilters);
+      $("mobileFilters").addEventListener("click", () => $("sidebar").classList.toggle("open"));
+      $("closeFilters").addEventListener("click", () => $("sidebar").classList.remove("open"));
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape") $("sidebar").classList.remove("open");
+      });
+    }
+
+    function bindPairedInputs(rangeId, numberId, callback) {
+      const range = $(rangeId);
+      const number = $(numberId);
+      let timer;
+      const apply = (source, target) => {
+        const min = Number(target.min || source.min);
+        const max = Number(target.max || source.max);
+        const value = Math.min(max, Math.max(min, Number(source.value)));
+        target.value = value;
+        source.value = value;
+        clearTimeout(timer);
+        timer = setTimeout(callback, 70);
+      };
+      range.addEventListener("input", () => apply(range, number));
+      number.addEventListener("input", () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => apply(number, range), 220);
+      });
+      number.addEventListener("change", () => apply(number, range));
+      number.addEventListener("keydown", event => {
+        if (event.key === "Enter") apply(number, range);
+      });
+    }
+
+    function resetFilters() {
+      ["yearFilter", "roadFilter", "causeFilter", "typeFilter", "classFilter", "severityFilter"].forEach(id => { $(id).value = ""; });
+      $("showMinor").checked = false;
+      $("scaleRange").value = CLUSTER_DEFAULTS.scaleMeters;
+      $("scaleNumber").value = CLUSTER_DEFAULTS.scaleMeters;
+      $("minimumRange").value = CLUSTER_DEFAULTS.minOccurrences;
+      $("minimumNumber").value = CLUSTER_DEFAULTS.minOccurrences;
+      clearSelection();
+      updateAnalysis();
+    }
+
+    function selectedIndex(id) {
+      const value = $(id).value;
+      return value === "" ? null : Number(value);
+    }
+
+    function getFilteredRows(ignoreYear = false) {
+      const yearIndex = selectedIndex("yearFilter");
+      const year = yearIndex === null ? null : DATA.years[yearIndex];
+      const roadIndex = selectedIndex("roadFilter");
+      const road = roadIndex === null ? null : ROADS[roadIndex];
+      const cause = selectedIndex("causeFilter");
+      const type = selectedIndex("typeFilter");
+      const accidentClass = selectedIndex("classFilter");
+      const severity = selectedIndex("severityFilter");
+      return DATA.rows.filter(row =>
+        (ignoreYear || year === null || row[R.YEAR] === year) &&
+        (road === null || row[R.BR] === road) &&
+        (cause === null || row[R.CAUSE] === cause) &&
+        (type === null || row[R.TYPE] === type) &&
+        (accidentClass === null || row[R.CLASS] === accidentClass) &&
+        (severity === null || row[R.SEVERITY] === severity)
+      );
+    }
+
+    function cubeRound(q, r) {
+      let x = q;
+      let z = r;
+      let y = -x - z;
+      let rx = Math.round(x);
+      let ry = Math.round(y);
+      let rz = Math.round(z);
+      const dx = Math.abs(rx - x);
+      const dy = Math.abs(ry - y);
+      const dz = Math.abs(rz - z);
+      if (dx > dy && dx > dz) rx = -ry - rz;
+      else if (dy > dz) ry = -rx - rz;
+      else rz = -rx - ry;
+      return [rx, rz];
+    }
+
+    function buildClusters(rows, scaleMeters) {
+      const refLat = DATA.meta.center[0];
+      const refLon = DATA.meta.center[1];
+      const metersPerLat = 111320;
+      const metersPerLon = 111320 * Math.cos(refLat * Math.PI / 180);
+      const hexSize = scaleMeters / Math.sqrt(3);
+      const cells = new Map();
+
+      for (const row of rows) {
+        if (!Number.isFinite(row[R.LAT]) || !Number.isFinite(row[R.LON])) continue;
+        const x = (row[R.LON] - refLon) * metersPerLon;
+        const y = (row[R.LAT] - refLat) * metersPerLat;
+        const qf = (Math.sqrt(3) / 3 * x - y / 3) / hexSize;
+        const rf = (2 / 3 * y) / hexSize;
+        const [q, r] = cubeRound(qf, rf);
+        const key = `${q}:${r}`;
+        let cell = cells.get(key);
+        if (!cell) {
+          cell = { key, q, r, rows: [], sumLat: 0, sumLon: 0 };
+          cells.set(key, cell);
+        }
+        cell.rows.push(row);
+        cell.sumLat += row[R.LAT];
+        cell.sumLon += row[R.LON];
+      }
+
+      return Array.from(cells.values()).map(cell => {
+        const count = cell.rows.length;
+        const centerX = hexSize * Math.sqrt(3) * (cell.q + cell.r / 2);
+        const centerY = hexSize * 1.5 * cell.r;
+        const vertices = [];
+        for (let i = 0; i < 6; i += 1) {
+          const angle = (30 + i * 60) * Math.PI / 180;
+          const vx = centerX + hexSize * Math.cos(angle);
+          const vy = centerY + hexSize * Math.sin(angle);
+          vertices.push([refLat + vy / metersPerLat, refLon + vx / metersPerLon]);
+        }
+        return { ...cell, count, lat: cell.sumLat / count, lon: cell.sumLon / count, vertices };
+      }).sort((a, b) => b.count - a.count);
+    }
+
+    function initialiseMap() {
+      if (typeof L === "undefined") {
+        setText("mapStatus", "Não foi possível carregar o mapa");
+        $("mapStatusDot").classList.remove("ready");
+        setText("mapCaption", "Verifique a conexão com a internet");
+        return;
+      }
+      const imagery = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        {
+          maxZoom: 20,
+          maxNativeZoom: 19,
+          attribution: "Tiles &copy; Esri &mdash; Sources: Esri, Maxar, Earthstar Geographics e GIS User Community"
+        }
+      );
+      const streets = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 20,
+        attribution: "&copy; OpenStreetMap contributors"
+      });
+
+      state.map = L.map("map", { zoomControl: true, preferCanvas: true, layers: [imagery] });
+      L.control.layers({ "Imagem aérea": imagery, "Mapa viário": streets }, null, { position: "topright" }).addTo(state.map);
+      L.control.scale({ imperial: false, position: "bottomleft" }).addTo(state.map);
+      state.map.fitBounds(DATA.meta.bounds, { padding: [25, 25] });
+      state.map.on("click", event => {
+        setGoogleLinks(event.latlng.lat, event.latlng.lng, "Ponto selecionado no mapa");
+      });
+      state.mapReady = true;
+      setAreaGoogleLink();
+      setTimeout(() => state.map.invalidateSize(), 0);
+    }
+
+    function updateAnalysis() {
+      if (typeof experience !== "undefined") {
+        updateGeographicSummary();
+        if (experience.mode !== "poles") { refreshExperience(); return; }
+      }
+      state.filteredRows = getFilteredRows();
+      const mappedRows = state.filteredRows.filter(row => isMapEligible(row));
+      const scale = Math.max(100, Number($("scaleNumber").value) || CLUSTER_DEFAULTS.scaleMeters);
+      const minimum = Math.max(1, Number($("minimumNumber").value) || CLUSTER_DEFAULTS.minOccurrences);
+      state.clusters = buildClusters(mappedRows, scale);
+      state.visibleClusters = state.clusters.filter(cluster => cluster.count >= minimum);
+
+      setText("kpiTotal", numberBR.format(state.filteredRows.length));
+      setText("kpiMapped", numberBR.format(mappedRows.length));
+      setText("kpiUnmapped", numberBR.format(state.filteredRows.length - mappedRows.length));
+      setText("kpiPoles", numberBR.format(state.visibleClusters.length));
+      setText("kpiMax", numberBR.format(state.visibleClusters[0]?.count || 0));
+      setText("kpiTotalSub", `de ${numberBR.format(DATA.meta.total)} registros`);
+      setText("kpiPolesSub", `mínimo de ${numberBR.format(minimum)} ocorrências`);
+      setText("mapCaption", `${numberBR.format(state.visibleClusters.length)} polos · áreas de ${numberBR.format(scale)} m`);
+
+      // Recalculate the selected profile whenever filters or geographic eligibility change.
+      if (state.selectedKey) clearSelection();
+      renderRanking();
+      if (state.mapReady) renderMapClusters();
+    }
+
+    function colourForCluster(count, maxCount, minor) {
+      if (minor) return "#d8e0db";
+      const t = maxCount <= 1 ? 0 : Math.sqrt(count / maxCount);
+      if (t > .82) return "#b92f2f";
+      if (t > .6) return "#dc542e";
+      if (t > .38) return "#ed862f";
+      return "#f2ad3e";
+    }
+
+    function clearMapLayers() {
+      if (!state.map) return;
+      state.layers.forEach(layer => state.map.removeLayer(layer));
+      state.layers = [];
+      removePolosLegend();
+    }
+
+    function removeCentroidMarker() {
+      if (state.map && state.centroidMarker) state.map.removeLayer(state.centroidMarker);
+      state.centroidMarker = null;
+    }
+
+    function showCentroid(cluster, rank) {
+      if (!state.mapReady) return;
+      removeCentroidMarker();
+      const point=mapPosition(cluster);
+      const icon = L.divIcon({
+        className: "centroid-leaflet-icon",
+        html: '<span class="centroid-crosshair"><span></span></span>',
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
+      });
+      const marker = L.marker([point.lat, point.lon], {
+        icon,
+        keyboard: true,
+        riseOnHover: true,
+        zIndexOffset: 2000,
+        title: `Polo ${rank > 0 ? `#${rank}` : "selecionado"}${point.projected ? " · alinhado ao eixo rodoviário" : " · centróide"}`
+      }).addTo(state.map);
+      const popup = document.createElement("div");
+      popup.className = "centroid-popup";
+      const title = document.createElement("strong");
+      title.textContent = `Polo ${rank > 0 ? `#${rank}` : "selecionado"}`;
+      popup.append(title);
+      appendPositionDetails(popup,cluster);
+      marker.bindPopup(popup, { closeButton: false, offset: [0, -15] }).openPopup();
+      state.centroidMarker = marker;
+    }
+
+    function renderMapClusters() {
+      clearMapLayers();
+      const minimum = Math.max(1, Number($("minimumNumber").value) || CLUSTER_DEFAULTS.minOccurrences);
+      const showMinor = $("showMinor").checked;
+      const clustersToDraw = showMinor ? state.clusters : state.visibleClusters;
+      const maxCount = state.visibleClusters[0]?.count || state.clusters[0]?.count || 1;
+      // Rótulo permanente só nos 10 maiores polos; os demais aparecem ao aproximar o mapa (zoom >= 14).
+      const topKeys = new Set([...state.visibleClusters].sort((a, b) => b.count - a.count).slice(0, 10).map(c => c.key));
+
+      clustersToDraw.forEach(cluster => {
+        const point=mapPosition(cluster);
+        const minor = cluster.count < minimum;
+        const colour = colourForCluster(cluster.count, maxCount, minor);
+        const ratio = Math.sqrt(cluster.count / Math.max(1, maxCount));
+        const radius = minor ? 6 : Math.round(8 + 16 * ratio);
+        const selected = state.selectedKey === cluster.key;
+        const circle = L.circleMarker([point.lat, point.lon], {
+          radius,
+          color: selected ? "#0d7b74" : "#ffffff",
+          weight: selected ? 5 : 2,
+          fillColor: colour,
+          fillOpacity: minor ? .5 : .8,
+          opacity: 1,
+          interactive: !minor
+        }).addTo(state.map);
+        circle.bindTooltip(numberBR.format(cluster.count), {
+          permanent: true,
+          direction: "center",
+          className: `cluster-count-label${minor ? " minor" : ""}${!minor && topKeys.has(cluster.key) ? "" : " secondary"}`,
+          opacity: 1
+        });
+        if (!minor) circle.on("click", event => {
+          L.DomEvent.stopPropagation(event);
+          selectCluster(cluster);
+        });
+        state.layers.push(circle);
+      });
+      addPolosLegend(maxCount);
+    }
+
+    // ---------- Legenda da aba de polos
+    let polosLegend = null;
+    function removePolosLegend() {
+      if (polosLegend && state.map) state.map.removeControl(polosLegend);
+      polosLegend = null;
+    }
+    function addPolosLegend(maxCount) {
+      if (!state.mapReady) return;
+      removePolosLegend();
+      const lim = t => Math.max(1, Math.round(t * t * maxCount));
+      const faixas = [["#f2ad3e", `até ${lim(.38)}`], ["#ed862f", `${lim(.38) + 1} a ${lim(.6)}`],
+                      ["#dc542e", `${lim(.6) + 1} a ${lim(.82)}`], ["#b92f2f", `mais de ${lim(.82)}`]];
+      polosLegend = L.control({ position: "bottomleft" });
+      polosLegend.onAdd = () => {
+        const div = L.DomUtil.create("div", "polos-legend");
+        div.innerHTML = `<strong>Acidentes em cada polo</strong>` +
+          faixas.map(([cor, txt]) => `<span><i style="background:${cor}"></i>${txt}</span>`).join("") +
+          `<small>Quanto maior e mais escuro o círculo, mais acidentes na área. Os números aparecem nos 10 maiores polos; aproxime o mapa para ver os demais.</small>`;
+        L.DomEvent.disableClickPropagation(div);
+        return div;
+      };
+      polosLegend.addTo(state.map);
+    }
+
+    function countBy(rows, field) {
+      const counts = new Map();
+      rows.forEach(row => counts.set(row[field], (counts.get(row[field]) || 0) + 1));
+      return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+    }
+
+    function dominant(rows, field, dictionary) {
+      const first = countBy(rows, field)[0];
+      if (!first) return "—";
+      return `${dictionary[first[0]]} · ${numberBR.format(first[1])}`;
+    }
+
+    function dominantVictimCause(rows, victimField, singular, plural) {
+      const totals = new Map();
+      rows.forEach(row => {
+        const victims = Number(row[victimField]) || 0;
+        if (victims > 0) totals.set(row[R.CAUSE], (totals.get(row[R.CAUSE]) || 0) + victims);
+      });
+      const first = [...totals.entries()].sort((a, b) =>
+        b[1] - a[1] || DATA.causes[a[0]].localeCompare(DATA.causes[b[0]], "pt-BR")
+      )[0];
+      if (!first) return "-";
+      const unit = first[1] === 1 ? singular : plural;
+      return `${DATA.causes[first[0]]} · ${numberBR.format(first[1])} ${unit}`;
+    }
+
+    function dominantAffectedEventType(rows, victimField) {
+      const counts = new Map();
+      rows.forEach(row => {
+        if ((Number(row[victimField]) || 0) > 0) {
+          counts.set(row[R.TYPE], (counts.get(row[R.TYPE]) || 0) + 1);
+        }
+      });
+      const first = [...counts.entries()].sort((a, b) =>
+        b[1] - a[1] || DATA.types[a[0]].localeCompare(DATA.types[b[0]], "pt-BR")
+      )[0];
+      if (!first) return "-";
+      return `${DATA.types[first[0]]} · ${numberBR.format(first[1])} ${first[1] === 1 ? "evento" : "eventos"}`;
+    }
+
+    function clusterLocation(cluster) {
+      const first = countBy(cluster.rows, R.MUNICIPALITY)[0];
+      const municipality = first ? DATA.municipalities[first[0]] : "Não informado";
+      const roads = countBy(cluster.rows, R.BR);
+      const br = roads[0] ? `BR-${String(roads[0][0]).padStart(3, "0")}` : "rodovia não informada";
+      const kms = cluster.rows.map(row => row[R.KM]).filter(Number.isFinite).sort((a, b) => a - b);
+      const km = kms.length ? `km ${numberBR.format(kms[Math.floor(kms.length / 2)])}` : "km não informado";
+      return `${municipality} · ${br}, ${km}`;
+    }
+
+    function formatPeriod(rows) {
+      const years = rows.map(row => row[R.YEAR]).filter(Boolean);
+      if (!years.length) return "—";
+      const min = Math.min(...years);
+      const max = Math.max(...years);
+      return min === max ? String(min) : `${min}–${max}`;
+    }
+
+    function googleMapUrl(lat, lon, zoom = 18) {
+      const point = encodeURIComponent(`${lat.toFixed(7)},${lon.toFixed(7)}`);
+      return `https://www.google.com/maps/@?api=1&map_action=map&center=${point}&zoom=${zoom}&basemap=satellite`;
+    }
+
+    function streetViewUrl(lat, lon) {
+      const point = encodeURIComponent(`${lat.toFixed(7)},${lon.toFixed(7)}`);
+      return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${point}`;
+    }
+
+    function setAreaGoogleLink() {
+      $("openGoogleArea").href = googleMapUrl(DATA.meta.center[0], DATA.meta.center[1], 13);
+    }
+
+    function setGoogleLinks(lat, lon, title) {
+      const satellite = $("googleSatelliteLink");
+      const street = $("streetViewLink");
+      satellite.href = googleMapUrl(lat, lon);
+      street.href = streetViewUrl(lat, lon);
+      [satellite, street].forEach(link => {
+        link.classList.remove("disabled");
+        link.setAttribute("aria-disabled", "false");
+      });
+      setText("googlePointTitle", title);
+      setText("googlePointMessage", `${lat.toFixed(6)}, ${lon.toFixed(6)} · os links serão abertos em uma nova aba.`);
+    }
+
+    function resetGoogleLinks() {
+      [$("googleSatelliteLink"), $("streetViewLink")].forEach(link => {
+        link.removeAttribute("href");
+        link.classList.add("disabled");
+        link.setAttribute("aria-disabled", "true");
+      });
+      setText("googlePointTitle", "Selecione um polo");
+      setText("googlePointMessage", "Clique em um círculo, no ranking ou em qualquer ponto do mapa.");
+    }
+
+    function selectCluster(cluster) {
+      state.selectedKey = cluster.key;
+      const point=mapPosition(cluster);
+      const rank = state.visibleClusters.findIndex(item => item.key === cluster.key) + 1;
+      const deaths = cluster.rows.reduce((sum, row) => sum + row[R.DEATHS], 0);
+      const serious = cluster.rows.reduce((sum, row) => sum + row[R.SERIOUS], 0);
+
+      $("detailsEmpty").hidden = true;
+      $("clusterSummary").classList.add("visible");
+      setText("selectionBadge", `polo ${rank > 0 ? `#${rank}` : "selecionado"}`);
+      setText("detailCount", numberBR.format(cluster.count));
+      setText("detailRank", rank > 0 ? `${rank}º no ranking atual` : "grupo selecionado");
+      setText("detailShare", percentBR.format(cluster.count / Math.max(1, state.filteredRows.length)));
+      setText("detailPeriod", formatPeriod(cluster.rows));
+      setText("detailDeaths", numberBR.format(deaths));
+      setText("detailSerious", numberBR.format(serious));
+      setText("detailCentroid", `${cluster.lat.toFixed(6)}, ${cluster.lon.toFixed(6)}`);
+      setText("detailMapPosition", `${point.lat.toFixed(6)}, ${point.lon.toFixed(6)}${point.projected ? " · eixo rodoviário" : ""}`);
+      setText("detailDeathCause", dominantVictimCause(cluster.rows, R.DEATHS, "morte", "mortes"));
+      setText("detailSeriousCause", dominantVictimCause(cluster.rows, R.SERIOUS, "ferido grave", "feridos graves"));
+      setText("detailFatalType", dominantAffectedEventType(cluster.rows, R.DEATHS));
+      setText("detailSeriousType", dominantAffectedEventType(cluster.rows, R.SERIOUS));
+      setText("detailLocation", clusterLocation(cluster));
+      setText("detailCause", dominant(cluster.rows, R.CAUSE, DATA.causes));
+      setText("detailType", dominant(cluster.rows, R.TYPE, DATA.types));
+      setText("detailSeverity", dominant(cluster.rows, R.SEVERITY, DATA.severities));
+      setGoogleLinks(point.lat, point.lon, rank > 0 ? `Polo #${rank} · ${numberBR.format(cluster.count)} ocorrências` : "Polo selecionado");
+
+      if (state.mapReady) {
+        renderMapClusters();
+        state.map.setView([point.lat, point.lon], Math.max(state.map.getZoom(), 16), { animate: true });
+        showCentroid(cluster, rank);
+      }
+    }
+
+    function clearSelection() {
+      state.selectedKey = null;
+      $("detailsEmpty").hidden = false;
+      $("clusterSummary").classList.remove("visible");
+      setText("selectionBadge", "nenhum selecionado");
+      setText("detailCentroid", "—");
+      setText("detailMapPosition", "—");
+      setText("detailDeathCause", "-");
+      setText("detailSeriousCause", "-");
+      setText("detailFatalType", "-");
+      setText("detailSeriousType", "-");
+      removeCentroidMarker();
+      resetGoogleLinks();
+    }
+
+    function renderRanking() {
+      const list = $("rankingList");
+      const fragment = document.createDocumentFragment();
+      const top = state.visibleClusters.slice(0, 6);
+      if (!top.length) {
+        const empty = document.createElement("div");
+        empty.className = "details-empty";
+        empty.textContent = "Nenhum polo atingiu o limite atual.";
+        fragment.appendChild(empty);
+      } else {
+        top.forEach((cluster, index) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "rank-button";
+          button.addEventListener("click", () => selectCluster(cluster));
+          const rank = document.createElement("span");
+          rank.className = "rank-number";
+          rank.textContent = String(index + 1);
+          const main = document.createElement("span");
+          main.className = "rank-main";
+          const title = document.createElement("strong");
+          title.textContent = clusterLocation(cluster);
+          const subtitle = document.createElement("span");
+          subtitle.textContent = dominant(cluster.rows, R.SEVERITY, DATA.severities);
+          main.append(title, subtitle);
+          const count = document.createElement("span");
+          count.className = "rank-count";
+          count.textContent = numberBR.format(cluster.count);
+          button.append(rank, main, count);
+          fragment.appendChild(button);
+        });
+      }
+      list.replaceChildren(fragment);
+    }
+
+    // Editable defaults. Geography triage never overwrites an original record.
+    const EXPERIENCE_DEFAULTS = { roadToleranceMeters: 500, monthDurationMs: 800, yearSummaryMs: 6000 };
+    const geography = new WeakMap();
+    const roadProjection = { segments: [], sx: 0, sy: 111320 };
+    const experience = { mode: "poles", timer: null, playing: false, cursor: 0, baseRows: [], referenceLayer: null, ranks: null };
+    const dateBR = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
+
+    function buildFrames(rows) {
+      const dates = rows.map(row => row[R.DATE]).filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date)).sort();
+      if (!dates.length) return [{ phase: "overall" }];
+      const frames = [];
+      const first = new Date(`${dates[0].slice(0,7)}-01T00:00:00Z`);
+      const last = dates[dates.length - 1].slice(0,7);
+      for (let cursor = first; cursor.toISOString().slice(0,7) <= last; cursor.setUTCMonth(cursor.getUTCMonth()+1)) {
+        const month = cursor.toISOString().slice(0,7), year = cursor.getUTCFullYear();
+        frames.push({ phase: "month", month, year });
+        if (cursor.getUTCMonth() === 11 || month === last) frames.push({ phase: "year", year });
+      }
+      frames.push({ phase: "overall" });
+      return frames;
+    }
+    const TIMELINE_FRAMES = buildFrames(DATA.rows);
+
+    function validCoordinates(row) {
+      return Number.isFinite(row[R.LAT]) && Number.isFinite(row[R.LON]) && Math.abs(row[R.LAT]) <= 90 && Math.abs(row[R.LON]) <= 180 && !(row[R.LAT] === 0 && row[R.LON] === 0);
+    }
+
+    function initialiseGeography() {
+      const sy = 111320, sx = sy * Math.cos(DATA.meta.center[0] * Math.PI / 180);
+      roadProjection.sx=sx; roadProjection.sy=sy; roadProjection.segments=[];
+      const segmentsByRoad = new Map();
+      for (const feature of ROAD_REFERENCE.features) {
+        if (!segmentsByRoad.has(feature.br)) segmentsByRoad.set(feature.br, []);
+        for (const path of feature.paths) {
+          for (let i = 1; i < path.length; i++) {
+            const a = path[i-1], b = path[i];
+            const dx = (b[0]-a[0])*sx, dy = (b[1]-a[1])*sy;
+            if (dx || dy) {
+              const segment={ x: a[0]*sx, y: a[1]*sy, dx, dy, square: dx*dx+dy*dy, br:feature.br, code:feature.code };
+              segmentsByRoad.get(feature.br).push(segment); roadProjection.segments.push(segment);
+            }
+          }
+        }
+      }
+      for (const row of DATA.rows) {
+        if (!validCoordinates(row)) { geography.set(row, { distance: null, reason: "Coordenada ausente ou inválida" }); continue; }
+        const segments = segmentsByRoad.get(row[R.BR]);
+        if (!segments?.length) { geography.set(row, { distance: null, reason: "BR sem traçado no recorte de referência" }); continue; }
+        let min = Infinity;
+        const px = row[R.LON]*sx, py = row[R.LAT]*sy;
+        for (const s of segments) {
+          const t = Math.max(0, Math.min(1, ((px-s.x)*s.dx+(py-s.y)*s.dy)/s.square));
+          min = Math.min(min, (px-s.x-t*s.dx)**2+(py-s.y-t*s.dy)**2);
+        }
+        geography.set(row, { distance: Math.sqrt(min), reason: "" });
+      }
+    }
+
+    function projectToRoad(lat, lon) {
+      const px=lon*roadProjection.sx, py=lat*roadProjection.sy;
+      let best=null, min=Infinity;
+      for(const segment of roadProjection.segments) {
+        const t=Math.max(0,Math.min(1,((px-segment.x)*segment.dx+(py-segment.y)*segment.dy)/segment.square));
+        const x=segment.x+t*segment.dx, y=segment.y+t*segment.dy;
+        const square=(px-x)**2+(py-y)**2;
+        if(square<min) {min=square;best={lat:y/roadProjection.sy,lon:x/roadProjection.sx,distance:Math.sqrt(square),br:segment.br,code:segment.code,projected:true};}
+      }
+      return best || {lat,lon,distance:0,projected:false};
+    }
+
+    function mapPosition(group) {
+      // Projection changes only the display point. All spatial grouping, centroid calculations and rankings keep raw coordinates.
+      if(!$("snapCentroids").checked) return {lat:group.lat,lon:group.lon,distance:0,projected:false};
+      if(!group.roadPosition) group.roadPosition=projectToRoad(group.lat,group.lon);
+      return group.roadPosition;
+    }
+
+    function appendPositionDetails(container, group) {
+      const point=mapPosition(group);
+      container.append(makeNode("div","",`Centróide calculado: ${group.lat.toFixed(6)}, ${group.lon.toFixed(6)}`),makeNode("div","",`${point.projected ? "Posição no eixo" : "Posição no mapa"}: ${point.lat.toFixed(6)}, ${point.lon.toFixed(6)}`));
+    }
+
+    function geographicTolerance() {
+      const value = Number($("roadTolerance").value);
+      return Number.isFinite(value) && value >= 100 ? Math.min(5000,value) : EXPERIENCE_DEFAULTS.roadToleranceMeters;
+    }
+
+    function isMapEligible(row) {
+      if (!validCoordinates(row)) return false;
+      if (!$("hideDisplaced").checked) return true;
+      const info = geography.get(row);
+      return Number.isFinite(info?.distance) && info.distance <= geographicTolerance();
+    }
+
+    function updateGeographicSummary() {
+      const rows = getFilteredRows(experience.mode === "timeline");
+      const questionable = rows.filter(row => !Number.isFinite(geography.get(row)?.distance) || geography.get(row).distance > geographicTolerance());
+      setText("geographicSummary", `${numberBR.format(questionable.length)} de ${numberBR.format(rows.length)} registros sinalizados no recorte. ${$("hideDisplaced").checked ? "Ocultos do mapa, dos polos e dos rankings espaciais." : "Triagem desativada: coordenadas válidas voltam ao mapa e aos rankings."}`);
+      $("downloadGeographicAudit").disabled = questionable.length === 0;
+    }
+
+    function downloadGeographicAudit() {
+      const rows = getFilteredRows(experience.mode === "timeline").filter(row => !Number.isFinite(geography.get(row)?.distance) || geography.get(row).distance > geographicTolerance());
+      const fields = ["id","data","ano","br_informada","km_informado","latitude_original","longitude_original","distancia_aproximada_ao_eixo_m","limite_m","situacao","motivo"];
+      const safeCSV = value => '"' + String(value ?? "").replace(/^[=+@]/, "'$&").replace(/"/g, '""') + '"';
+      const lines = [fields, ...rows.map(row => {
+        const info = geography.get(row);
+        return [row[R.ID],row[R.DATE],row[R.YEAR],row[R.BR],row[R.KM],row[R.LAT],row[R.LON],Number.isFinite(info.distance) ? Math.round(info.distance) : "",geographicTolerance(),isMapEligible(row) ? "Visível com triagem desativada" : "Oculto",info.reason || "Distância ao traçado da BR informada acima da tolerância; coordenada não corrigida"];
+      })];
+      const url = URL.createObjectURL(new Blob(["\uFEFF"+lines.map(line=>line.map(safeCSV).join(";")).join("\r\n")],{type:"text/csv;charset=utf-8"}));
+      const link = document.createElement("a"); link.href=url; link.download="revisao-coordenadas-acidentes.csv"; document.body.append(link); link.click(); link.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
+
+    function toggleRoadReference() {
+      if (!state.mapReady) return;
+      if (experience.referenceLayer) state.map.removeLayer(experience.referenceLayer);
+      experience.referenceLayer = null;
+      if (!$("showRoadReference").checked) return;
+      if (experience.mode==="timeline" && TIMELINE_FRAMES[experience.cursor].phase!=="month") return;
+      const lines = ROAD_REFERENCE.features.flatMap(feature => feature.paths.map(path => L.polyline(path.map(p=>[p[1],p[0]]),{color: feature.br===262 ? "#37ddc1" : "#85c7ff",weight:2,opacity:.8,interactive:false})));
+      experience.referenceLayer = L.layerGroup(lines).addTo(state.map);
+      lines.forEach(line=>line.bringToBack());
+    }
+
+    // Only the coordinates and spatial scale are used as group keys. BR/km are labels, never keys.
+    function buildSpatialRankings(rows, scale, minimum) {
+      const mapped = rows.filter(isMapEligible);
+      const clusters = buildClusters(mapped, scale, minimum);
+      const groups = clusters.filter(group=>group.count>=minimum).map(group=>{
+        const representative = group.rows.reduce((best,row)=>{
+          const distance = (row[R.LAT]-group.lat)**2 + ((row[R.LON]-group.lon)*Math.cos(group.lat*Math.PI/180))**2;
+          return !best || distance<best.distance || (distance===best.distance && String(row[R.ID])<String(best.row[R.ID])) ? {row,distance} : best;
+        },null).row;
+        return {...group, representative, deaths:group.rows.reduce((s,r)=>s+(Number(r[R.DEATHS])||0),0), serious:group.rows.reduce((s,r)=>s+(Number(r[R.SERIOUS])||0),0)};
+      });
+      const tie = (a,b)=>a.lat-b.lat || a.lon-b.lon;
+      const all = groups.sort((a,b)=>b.count-a.count || b.deaths-a.deaths || b.serious-a.serious || tie(a,b));
+      const accidents=all.slice(0,5);
+      const severe=[...all].filter(g=>g.deaths+g.serious>0).sort((a,b)=>b.deaths-a.deaths || b.serious-a.serious || b.count-a.count || tie(a,b)).slice(0,5);
+      accidents.forEach((group,index)=>{group.accidentRank=index+1;});
+      severe.forEach((group,index)=>{group.severityRank=index+1;});
+      // Do not reuse the accidents rank as a pole number in the severity list.
+      all.forEach(group=>{group.label=rankingBadges(group) || "Polo espacial";});
+      return {mapped, clusters, all, accidents, severe};
+    }
+
+    function rankingBadges(group) {
+      return [group.accidentRank ? `A${group.accidentRank}` : "",group.severityRank ? `S${group.severityRank}` : ""].filter(Boolean).join(" · ");
+    }
+
+    function spatialScale() { return Math.max(100, Number($("scaleNumber").value)||CLUSTER_DEFAULTS.scaleMeters); }
+    function spatialMinimum() { return Math.max(1, Number($("minimumNumber").value)||CLUSTER_DEFAULTS.minOccurrences); }
+    function referenceLabel(group) {
+      const row = group.representative;
+      const br = Number.isFinite(row[R.BR]) ? `BR-${String(row[R.BR]).padStart(3,"0")}` : "BR não informada";
+      const km = Number.isFinite(row[R.KM]) ? `km ${numberBR.format(row[R.KM])}` : "km não informado";
+      return `${br} · ${km}`;
+    }
+
+    function makeNode(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function renderSpatialList(id, groups, severe) {
+      const fragment = document.createDocumentFragment();
+      if (!groups.length) fragment.append(makeNode("p","details-empty",severe ? "Nenhum polo com mortes ou feridos graves atende ao mínimo atual." : "Nenhum polo atende aos filtros e ao mínimo atual."));
+      groups.forEach((group,index)=>{
+        const row = makeNode("article",`km-row${severe ? " severe" : ""}`);
+        const position = makeNode("div","km-position",String(index+1).padStart(2,"0"));
+        const main = makeNode("div","km-main");
+        const rankCode=`${severe ? "S" : "A"}${severe ? group.severityRank : group.accidentRank}`;
+        const link = makeNode("a","",`Polo ${rankCode} ↗`);
+        const point=mapPosition(group);
+        link.href=streetViewUrl(point.lat,point.lon); link.target="_blank"; link.rel="noopener noreferrer";
+        link.setAttribute("aria-label",`${rankCode}, ${index+1}º por ${severe ? "severidade" : "acidentes"}, referência ${referenceLabel(group)}: abrir Street View em nova aba`);
+        main.append(link,makeNode("span","km-meta",`Centróide ${group.lat.toFixed(5)}, ${group.lon.toFixed(5)}`));
+        // Only accident counts use a single bar. A sum of deaths + injuries would suggest a different severity order.
+        if (!severe) {
+          const bar = makeNode("div","km-bar"), fill = makeNode("i");
+          const max = Math.max(...groups.map(g=>g.count),1);
+          fill.style.width=`${100*group.count/max}%`; bar.append(fill); main.append(bar);
+        }
+        const numbers = makeNode("div","km-numbers");
+        numbers.append(makeNode("strong","",severe ? `${group.deaths} M · ${group.serious} G` : numberBR.format(group.count)));
+        numbers.append(makeNode("small","",severe ? `${numberBR.format(group.count)} acidentes` : `${group.deaths} mortos · ${group.serious} graves`));
+        const locate=makeNode("button","locate-km","Localizar no mapa"); locate.type="button"; locate.addEventListener("click",()=>focusRankedGroup(group)); numbers.append(locate);
+        row.append(position,main,numbers); fragment.append(row);
+      });
+      $(id).replaceChildren(fragment);
+    }
+
+    function spatialPopup(group) {
+      const popup=makeNode("div","km-popup");
+      const point=mapPosition(group);
+      popup.append(makeNode("strong","",`${group.label} · ${referenceLabel(group)}`),makeNode("div","",`${group.count} acidentes · ${group.deaths} mortos · ${group.serious} graves`));
+      appendPositionDetails(popup,group);
+      popup.append(makeNode("small","","BR/km apenas indicativos; grupo calculado pelas coordenadas."));
+      const link=makeNode("a","","Abrir imagem Street View ↗"); link.href=streetViewUrl(point.lat,point.lon); link.target="_blank"; link.rel="noopener noreferrer"; popup.append(link);
+      const details=makeNode("details","method-details"), summary=makeNode("summary","","Causas e tipos predominantes");
+      details.append(summary,makeNode("p","",`Causa das mortes: ${dominantVictimCause(group.rows,R.DEATHS,"morte","mortes")}`),makeNode("p","",`Causa dos graves: ${dominantVictimCause(group.rows,R.SERIOUS,"ferido grave","feridos graves")}`),makeNode("p","",`Tipo nos eventos fatais: ${dominantAffectedEventType(group.rows,R.DEATHS)}`),makeNode("p","",`Tipo nos eventos com graves: ${dominantAffectedEventType(group.rows,R.SERIOUS)}`));
+      popup.append(details); return popup;
+    }
+
+    function focusRankedGroup(group) {
+      pauseTimeline();
+      const point=mapPosition(group);
+      setGoogleLinks(point.lat,point.lon,`${group.label} · ${referenceLabel(group)}`);
+      if (!state.mapReady) return;
+      state.map.setView([point.lat,point.lon],Math.max(state.map.getZoom(),16),{animate:!window.matchMedia("(prefers-reduced-motion: reduce)").matches});
+      L.popup({maxWidth:310}).setLatLng([point.lat,point.lon]).setContent(spatialPopup(group)).openOn(state.map);
+    }
+
+    // Marcadores que se sobrepõem são afastados com linha de chamada; o arranjo é refeito a cada zoom.
+    let rankedEntries=[];
+    function repositionRankedMarkers() {
+      if (!state.mapReady || !rankedEntries.length) return;
+      const placed=[];
+      const livre=q=>placed.every(r=>Math.hypot(q.x-r.x,q.y-r.y)>=48);
+      rankedEntries.forEach(e=>{
+        if (!state.map.hasLayer(e.marker)) return;
+        const p0=state.map.latLngToContainerPoint(e.base);
+        let p=p0;
+        if (!livre(p0)) {
+          busca: for (const raio of [54,80,106]) for (let k=0;k<8;k++) {
+            const ang=-Math.PI/2+k*Math.PI/4, q=L.point(p0.x+raio*Math.cos(ang),p0.y+raio*Math.sin(ang));
+            if (livre(q)) { p=q; break busca; }
+          }
+        }
+        placed.push(p);
+        if (p===p0) {
+          e.marker.setLatLng(e.base);
+          if (state.map.hasLayer(e.leader)) state.map.removeLayer(e.leader);
+          if (state.map.hasLayer(e.anchor)) state.map.removeLayer(e.anchor);
+        } else {
+          const pos=state.map.containerPointToLatLng(p);
+          e.marker.setLatLng(pos); e.leader.setLatLngs([e.base,pos]);
+          if (!state.map.hasLayer(e.leader)) e.leader.addTo(state.map);
+          if (!state.map.hasLayer(e.anchor)) e.anchor.addTo(state.map);
+        }
+      });
+    }
+    function renderRankedMarkers(ranks) {
+      if (!state.mapReady) return;
+      rankedEntries=[];
+      const unique=new Map();
+      [...ranks.accidents,...ranks.severe].forEach(group=>unique.set(group.key,group));
+      for (const group of unique.values()) {
+        const a=group.accidentRank, s=group.severityRank;
+        const badge = rankingBadges(group);
+        const point=mapPosition(group);
+        const icon=L.divIcon({className:"km-map-icon",html:`<span class="km-marker ${a&&s ? "dual" : s ? "severe" : ""}">${badge}</span>`,iconSize:[44,44],iconAnchor:[22,22]});
+        const base=L.latLng(point.lat,point.lon);
+        const leader=L.polyline([base,base],{color:"#ffffff",weight:2,opacity:.95,interactive:false});
+        const anchor=L.circleMarker(base,{radius:3.5,color:"#ffffff",weight:1.5,fillColor:"#123047",fillOpacity:1,interactive:false});
+        state.layers.push(leader,anchor);
+        const marker=L.marker(base,{icon,keyboard:true,title:`${badge} · ${referenceLabel(group)}${point.projected ? " · eixo rodoviário" : " · centróide"}`,zIndexOffset:1000}).addTo(state.map);
+        rankedEntries.push({base,marker,leader,anchor});
+        marker.bindPopup(spatialPopup(group),{maxWidth:310});
+        marker.bindTooltip(makeNode("div","",`${group.label} · ${referenceLabel(group)} (referência)`));
+        marker.on("click",()=>pauseTimeline());
+        state.layers.push(marker);
+      }
+      repositionRankedMarkers();
+    }
+
+    function renderOccurrencePoints(rows) {
+      if (!state.mapReady) return;
+      rows.forEach(row=>{
+        const color=row[R.DEATHS]>0 ? "#ff6174" : row[R.SERIOUS]>0 ? "#b898f1" : "#ffe3a1";
+        const dot=L.circleMarker([row[R.LAT],row[R.LON]],{radius:3,color,weight:0,fillColor:color,fillOpacity:.55,interactive:true}).addTo(state.map);
+        const text=makeNode("div","",`${row[R.DATE].split("-").reverse().join("/")} · ${row[R.DEATHS]} mortos · ${row[R.SERIOUS]} graves`);
+        dot.bindTooltip(text); state.layers.push(dot);
+      });
+    }
+
+    function cumulativeCircleStyle(count, belowMinimum) {
+      // Fixed count-to-size scale: a cell never shrinks simply because another cell gained more events.
+      return {radius:Math.max(9,Math.min(44,5*Math.sqrt(count))),color:"#ffffff",weight:2,fillColor:belowMinimum ? "#648381" : "#0d7b74",fillOpacity:.94,opacity:1};
+    }
+
+    function renderCumulativeCircles(clusters, title) {
+      if (!state.mapReady) return;
+      // Draw every occupied cell, including those below the ranking threshold, so no accumulated events vanish.
+      const topGroups=new Set([...clusters].sort((a,b)=>b.count-a.count).slice(0,10));
+      clusters.forEach(group=>{
+        const belowMinimum=group.count<spatialMinimum();
+        const point=mapPosition(group);
+        const circle=L.circleMarker([point.lat,point.lon],cumulativeCircleStyle(group.count,belowMinimum)).addTo(state.map);
+        circle.bindTooltip(numberBR.format(group.count),{permanent:true,direction:"center",className:`cluster-count-label${topGroups.has(group) ? "" : " secondary"}`,opacity:1});
+        const popup=makeNode("div","km-popup");
+        popup.append(makeNode("strong","",`${numberBR.format(group.count)} acidentes acumulados`),makeNode("div","",title),makeNode("div","",`${group.rows.reduce((s,r)=>s+r[R.DEATHS],0)} mortos · ${group.rows.reduce((s,r)=>s+r[R.SERIOUS],0)} feridos graves`));
+        appendPositionDetails(popup,group);
+        popup.append(makeNode("small","",belowMinimum ? `Abaixo do mínimo de ${spatialMinimum()} ocorrências para os rankings.` : "Contagem de todos os meses transcorridos no período exibido."));
+        circle.bindPopup(popup,{maxWidth:310}); circle.on("click",()=>pauseTimeline()); state.layers.push(circle);
+      });
+    }
+
+    function renderExperienceRows(rows, title, context, month, showHighlights) {
+      state.filteredRows=rows;
+      const ranks=buildSpatialRankings(rows,spatialScale(),spatialMinimum()); experience.ranks=ranks;
+      state.clusters=ranks.clusters; state.visibleClusters=ranks.all;
+      setText("rankingPeriod",title); setText("rankingContext",context);
+      setText("rankTotal",numberBR.format(ranks.mapped.length));
+      setText("rankDeaths",numberBR.format(ranks.mapped.reduce((s,r)=>s+r[R.DEATHS],0)));
+      setText("rankSerious",numberBR.format(ranks.mapped.reduce((s,r)=>s+r[R.SERIOUS],0)));
+      setText("kpiTotal",numberBR.format(rows.length)); setText("kpiTotalSub",`recorte: ${title}`);
+      setText("kpiMapped",numberBR.format(ranks.mapped.length)); setText("kpiUnmapped",numberBR.format(rows.length-ranks.mapped.length));
+      setText("kpiPoles",numberBR.format(ranks.all.length)); setText("kpiMax",numberBR.format(ranks.all[0]?.count||0));
+      setText("kpiPolesSub",`mínimo de ${spatialMinimum()} ocorrências`);
+      const classified=ranks.all.reduce((s,g)=>s+g.count,0);
+      setText("rankCoverage",`Cabeçalho: totais de ${numberBR.format(ranks.mapped.length)} ocorrências aptas ao mapa. ${numberBR.format(classified)} delas integram ${ranks.all.length} polos; ${numberBR.format(ranks.mapped.length-classified)} estão abaixo do mínimo por célula. ${rows.length-ranks.mapped.length} registros ficaram fora por triagem geográfica. Célula: ${numberBR.format(spatialScale())} m. M = mortos · G = graves.`);
+      renderSpatialList("topAccidents",ranks.accidents,false); renderSpatialList("topSeverity",ranks.severe,true);
+      clearMapLayers(); removeCentroidMarker();
+      const cumulative=experience.mode==="timeline";
+      const highlightsOnly=cumulative && showHighlights;
+      if (state.mapReady) {
+        state.map.closePopup();
+        if (cumulative && !highlightsOnly) renderCumulativeCircles(ranks.clusters,title);
+        else if (!cumulative) renderOccurrencePoints(ranks.mapped);
+        if(showHighlights) renderRankedMarkers(ranks);
+        toggleRoadReference();
+      }
+      setText("mapModeTitle",showHighlights ? "Top 5 · polos espaciais" : "Acumulado anual de acidentes");
+      setText("mapCaption",highlightsOnly ? `${title} · somente destaques A e S${ranks.accidents.length ? "" : " · nenhum polo atende aos critérios"}` : `${title} · ${numberBR.format(ranks.mapped.length)} ocorrências no mapa${showHighlights ? " · A: acidentes / S: severidade" : " · números nos círculos = acumulado desde janeiro"}`);
+      $("eventMapLegend").hidden=cumulative;
+      $("cumulativeMapLegend").hidden=!cumulative || highlightsOnly;
+      $("topMapLegend").hidden=!showHighlights;
+    }
+
+    function timelineRows(frame, baseRows) {
+      if(frame.phase==="overall") return baseRows;
+      // Always rebuild January-to-cutoff, not just the current month; the year condition resets accumulation.
+      const firstMonth=`${frame.year}-01`;
+      const lastMonth=frame.phase==="year" ? `${frame.year}-12` : frame.month;
+      return baseRows.filter(row=>row[R.YEAR]===frame.year && row[R.DATE].slice(0,7)>=firstMonth && row[R.DATE].slice(0,7)<=lastMonth);
+    }
+
+    function renderTimelineFrame() {
+      const frame=TIMELINE_FRAMES[experience.cursor];
+      const rows=timelineRows(frame,experience.baseRows);
+      const monthly=frame.phase==="month";
+      const monthLabel=monthly ? dateBR.format(new Date(`${frame.month}-01T00:00:00Z`)) : "";
+      const title=monthly ? `Jan → ${new Intl.DateTimeFormat("pt-BR",{month:"short",timeZone:"UTC"}).format(new Date(`${frame.month}-01T00:00:00Z`))} ${frame.year}` : frame.phase==="year" ? `Balanço ${frame.year}` : `Síntese ${formatPeriod(DATA.rows)}`;
+      setText("timelineDate",monthly ? `Acumulado até ${monthLabel}` : title); $("timelineSeek").value=experience.cursor;
+      $("timelineSeek").setAttribute("aria-valuetext",title);
+      setText("timelineStatus",experience.playing ? (monthly ? "Reproduzindo · acumulado do ano até este mês" : frame.phase==="year" ? "Destaques do ano · 6 segundos para leitura" : "Período completo · reprodução concluída") : (frame.phase==="overall" ? "Período completo · reprodução concluída" : "Pausada · use Reproduzir para continuar"));
+      document.querySelectorAll("#yearChapters button").forEach(button=>button.classList.toggle("active",button.dataset.year===String(frame.year ?? "all")));
+      const context=monthly ? "Acumulado de janeiro até o mês exibido — não apenas as ocorrências deste mês. A1–A5 e S1–S5 são posições independentes." : frame.phase==="year" ? "Acumulado de janeiro a dezembro deste ano. O próximo ano inicia uma nova contagem." : "Resultados de todo o período. Grupos por coordenadas; km somente como referência.";
+      renderExperienceRows(rows,title,context,monthly?frame.month:null,!monthly);
+      setText("timelineAccumulatedLabel",frame.phase==="overall" ? "Acumulado de todo o período · no mapa" : "Acumulado no ano · no mapa");
+      setText("timelineAccumulated",numberBR.format(experience.ranks.mapped.length));
+      setText("timelineNewMonth",monthly ? numberBR.format(experience.ranks.mapped.filter(row=>row[R.DATE].slice(0,7)===frame.month).length) : "—");
+      if(frame.phase==="overall") setText("timelineScope","Síntese final: reúne os anos analisados. As coordenadas ocultas continuam fora do mapa e dos rankings.");
+      else {
+        const monthNumber=monthly ? Number(frame.month.slice(5)) : 12;
+        const lastDay=new Date(Date.UTC(frame.year,monthNumber,0)).getUTCDate();
+        setText("timelineScope",`Período acumulado: 01/01/${frame.year} a ${lastDay}/${String(monthNumber).padStart(2,"0")}/${frame.year}. Os meses anteriores permanecem nos círculos; a contagem reinicia no ano seguinte.`);
+      }
+    }
+
+    function refreshExperience() {
+      pauseTimeline();
+      if(experience.mode==="timeline") { experience.baseRows=getFilteredRows(true); renderTimelineFrame(); }
+      else { const rows=getFilteredRows(); renderExperienceRows(rows,formatPeriod(rows)==="—" ? "Sem ocorrências" : `Período ${formatPeriod(rows)}`,"Visão estática · filtros aplicados · agrupamento somente por coordenadas.",null,true); }
+    }
+
+    function pauseTimeline() {
+      clearTimeout(experience.timer); experience.timer=null; experience.playing=false;
+      setText("timelinePlay",experience.cursor===TIMELINE_FRAMES.length-1 ? "▶ Repetir" : "▶ Reproduzir");
+      if(experience.mode==="timeline" && experience.cursor<TIMELINE_FRAMES.length-1) setText("timelineStatus","Pausada · use Reproduzir para continuar");
+    }
+
+    function scheduleTimeline() {
+      clearTimeout(experience.timer);
+      if(!experience.playing) return;
+      const frame=TIMELINE_FRAMES[experience.cursor];
+      const duration=frame.phase==="year" ? EXPERIENCE_DEFAULTS.yearSummaryMs : Number($("timelineSpeed").value)||EXPERIENCE_DEFAULTS.monthDurationMs;
+      experience.timer=setTimeout(()=>{
+        if(!experience.playing) return;
+        experience.cursor=Math.min(TIMELINE_FRAMES.length-1,experience.cursor+1);
+        if(experience.cursor===TIMELINE_FRAMES.length-1) pauseTimeline();
+        renderTimelineFrame();
+        scheduleTimeline();
+      },duration);
+    }
+
+    function toggleTimeline() {
+      if(experience.playing) { pauseTimeline(); return; }
+      if(experience.cursor===TIMELINE_FRAMES.length-1) experience.cursor=0;
+      experience.playing=true; setText("timelinePlay","Ⅱ Pausar"); renderTimelineFrame(); scheduleTimeline();
+    }
+
+    function switchExperience(mode) {
+      if(!["poles","timeline","rankings"].includes(mode)) return;
+      pauseTimeline(); clearSelection(); clearMapLayers();
+      experience.mode=mode;
+      document.querySelector("main").dataset.mode=mode;
+      document.querySelectorAll("[data-view]").forEach(button=>{button.classList.toggle("active",button.dataset.view===mode);button.setAttribute("aria-pressed",String(button.dataset.view===mode));});
+      $("timelineControls").hidden=mode!=="timeline"; $("kmPanel").hidden=mode==="poles"; $("temporalMapLegend").hidden=mode==="poles";
+      $("poleLegend").hidden=mode!=="poles"; $("spatialLegend").hidden=mode==="poles";
+      $("showMinor").disabled=mode!=="poles";
+      $("showMinor").title=mode!=="poles" ? "Controle exclusivo da visualização de polos; os rankings respeitam o mínimo de ocorrências." : "";
+      $("yearFilter").disabled=mode==="timeline";
+      $("yearFilter").title=mode==="timeline" ? "A animação percorre todos os anos; o filtro será retomado ao sair." : "";
+      if(mode==="poles") setText("mapModeTitle","Polos espaciais");
+      updateAnalysis();
+      toggleRoadReference();
+      if(state.mapReady) { state.map.invalidateSize(); fitAnalysis(); }
+    }
+
+    function fitAnalysis() {
+      if(!state.mapReady) return;
+      // Keep the same full-period framing throughout playback, including months without events.
+      const rows=(experience.mode==="timeline" ? experience.baseRows : state.filteredRows).filter(isMapEligible);
+      state.map.fitBounds(rows.length ? L.latLngBounds(rows.map(r=>[r[R.LAT],r[R.LON]])) : DATA.meta.bounds,{padding:[45,65],maxZoom:16});
+    }
+
+    function initialiseExperience() {
+      $("roadTolerance").value=EXPERIENCE_DEFAULTS.roadToleranceMeters;
+      initialiseGeography();
+      $("roadTolerance").addEventListener("change",()=>{ $("roadTolerance").value=geographicTolerance(); updateAnalysis(); });
+      $("hideDisplaced").addEventListener("change",updateAnalysis);
+      $("showRoadReference").addEventListener("change",toggleRoadReference);
+      $("snapCentroids").addEventListener("change",updateAnalysis);
+      $("downloadGeographicAudit").addEventListener("click",downloadGeographicAudit);
+      $("fitAnalysis").addEventListener("click",fitAnalysis);
+      document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",()=>switchExperience(button.dataset.view)));
+      $("timelinePlay").addEventListener("click",toggleTimeline);
+      $("timelineRestart").addEventListener("click",()=>{pauseTimeline();experience.cursor=0;renderTimelineFrame();});
+      $("timelineSpeed").addEventListener("change",scheduleTimeline);
+      $("timelineSeek").max=TIMELINE_FRAMES.length-1;
+      $("timelineSeek").addEventListener("input",()=>{pauseTimeline();experience.cursor=Number($("timelineSeek").value);renderTimelineFrame();});
+      setText("timelineStart",DATA.rows.map(r=>r[R.DATE]).sort()[0].split("-").reverse().join("/"));
+      setText("timelineEnd",DATA.rows.map(r=>r[R.DATE]).sort().at(-1).split("-").reverse().join("/"));
+      TIMELINE_FRAMES.forEach((frame,index)=>{
+        if(frame.phase==="month") return;
+        const button=makeNode("button","",frame.phase==="year" ? String(frame.year) : "Síntese");
+        button.type="button"; button.dataset.year=String(frame.year??"all");
+        button.title=frame.phase==="year" ? `Ver os destaques de ${frame.year}` : "Ver os destaques do período completo";
+        button.addEventListener("click",()=>{pauseTimeline();experience.cursor=index;renderTimelineFrame();});
+        $("yearChapters").append(button);
+      });
+      document.addEventListener("visibilitychange",()=>{if(document.hidden)pauseTimeline();});
+      window.addEventListener("pagehide",pauseTimeline);
+    }
+
+    // Additional analytical views. Original cell implementation remains selectable.
+    const cellClusters = buildClusters;
+    function distanceMeters(a,b) {
+      const rad=Math.PI/180, dlat=(a[R.LAT]-b[R.LAT])*rad, dlon=(a[R.LON]-b[R.LON])*rad;
+      const h=Math.sin(dlat/2)**2+Math.cos(a[R.LAT]*rad)*Math.cos(b[R.LAT]*rad)*Math.sin(dlon/2)**2;
+      return 12742000*Math.asin(Math.sqrt(Math.min(1,h)));
+    }
+    function dbscanClusters(rows,radius,minimum) {
+      const points=rows.filter(validCoordinates).slice().sort((a,b)=>a[R.LAT]-b[R.LAT] || a[R.LON]-b[R.LON] || String(a[R.ID]).localeCompare(String(b[R.ID])));
+      // Latitude strips bound candidate searches; final neighborhood uses spherical distance.
+      const strips=new Map(), step=radius/111000;
+      points.forEach((r,i)=>{const k=Math.floor(r[R.LAT]/step); if(!strips.has(k))strips.set(k,[]);strips.get(k).push(i);});
+      const neighbors=i=>{
+        const k=Math.floor(points[i][R.LAT]/step), found=[];
+        for(let j=k-1;j<=k+1;j++) for(const n of strips.get(j)||[]) if(distanceMeters(points[i],points[n])<=radius)found.push(n);
+        return found;
+      };
+      const labels=new Int32Array(points.length).fill(-1), visited=new Uint8Array(points.length), groups=[];
+      for(let i=0;i<points.length;i++) {
+        if(visited[i])continue;
+        visited[i]=1;const near=neighbors(i);
+        if(near.length<minimum)continue;
+        const id=groups.length;groups.push([]);labels[i]=id;
+        const queue=near.slice(), queued=new Set(queue);
+        for(let q=0;q<queue.length;q++) {
+          const j=queue[q];
+          if(!visited[j]) {visited[j]=1;const next=neighbors(j);if(next.length>=minimum)for(const n of next)if(!queued.has(n)){queued.add(n);queue.push(n);}}
+          if(labels[j]<0)labels[j]=id;
+        }
+      }
+      points.forEach((r,i)=>{if(labels[i]>=0)groups[labels[i]].push(r);});
+      const result=groups.map((rs,i)=>({key:`db:${i}`,rows:rs,noise:false}));
+      points.forEach((r,i)=>{if(labels[i]<0)result.push({key:`noise:${i}`,rows:[r],noise:true});});
+      return result.map(g=>({...g,count:g.rows.length,lat:g.rows.reduce((s,r)=>s+r[R.LAT],0)/g.rows.length,lon:g.rows.reduce((s,r)=>s+r[R.LON],0)/g.rows.length,vertices:[]})).sort((a,b)=>b.count-a.count || a.lat-b.lat || a.lon-b.lon);
+    }
+    buildClusters=function(rows,scale,minimum=spatialMinimum()) {
+      return $("clusterMethod").value==="dbscan" ? dbscanClusters(rows,scale,minimum) : cellClusters(rows,scale);
+    };
+    function methodDescription() {return `${$("clusterMethod").value==="dbscan" ? "Agrupamento por proximidade · raio" : "Áreas de"} ${numberBR.format(spatialScale())} m`;}
+    function historyFor(group,years) {
+      return years.map(year=>{const rows=group.rows.filter(r=>r[R.YEAR]===year);return {year,count:rows.length,deaths:rows.reduce((s,r)=>s+(+r[R.DEATHS]||0),0),serious:rows.reduce((s,r)=>s+(+r[R.SERIOUS]||0),0)};});
+    }
+    function analysisYears() {
+      if(experience.mode==="timeline") {const frame=TIMELINE_FRAMES[experience.cursor];return frame.phase==="overall" ? DATA.years : [frame.year];}
+      const index=selectedIndex("yearFilter");return index===null ? DATA.years : [DATA.years[index]];
+    }
+    function historyPanel(group) {
+      const box=makeNode("div","pole-history"), years=analysisYears(), values=historyFor(group,years);
+      box.append(makeNode("h3","","Evolução anual do polo"),makeNode("p","field-note","Grupo fixo e filtros do recorte atual. Barras com escala própria por indicador; números indicam os totais. Ano em andamento na animação é parcial."));
+      const table=makeNode("table","history-table"), head=makeNode("tr");
+      ["Ano","Acidentes","Mortos","Graves"].forEach(t=>head.append(makeNode("th","",t)));table.append(head);
+      const maxima=["count","deaths","serious"].map(k=>Math.max(1,...values.map(v=>v[k])));
+      values.forEach(v=>{const row=makeNode("tr");row.append(makeNode("th","",String(v.year)));["count","deaths","serious"].forEach((k,i)=>{const td=makeNode("td",""),bar=makeNode("span",`history-bar series-${i}`,numberBR.format(v[k]));bar.style.backgroundSize=`${100*v[k]/maxima[i]}% 100%`;td.append(bar);row.append(td);});table.append(row);});box.append(table);
+      const active=values.filter(v=>v.count>=spatialMinimum()).length;
+      box.append(makeNode("p","field-note",years.length>1 ? `Persistência: mínimo atingido em ${active} de ${years.length} anos. Grupos não são recalculados ano a ano nesta leitura.` : "Selecione todos os anos para comparar a evolução e avaliar persistência."));
+      const lat=group.rows.map(r=>r[R.LAT]),lon=group.rows.map(r=>r[R.LON]);
+      const a=[],b=[];a[R.LAT]=Math.min(...lat);a[R.LON]=Math.min(...lon);b[R.LAT]=Math.max(...lat);b[R.LON]=Math.max(...lon);
+      box.append(makeNode("p","field-note",`Extensão aproximada (diagonal da área envolvente): ${numberBR.format(Math.round(distanceMeters(a,b)))} m. Não é distância percorrida pela rodovia.`));
+      return box;
+    }
+    const originalSelectCluster=selectCluster;
+    selectCluster=function(group){originalSelectCluster(group);$("poleHistory").replaceChildren(historyPanel(group));};
+    const originalSpatialPopup=spatialPopup;
+    spatialPopup=function(group){const popup=originalSpatialPopup(group);const detail=makeNode("details","method-details");detail.append(makeNode("summary","","Histórico anual do polo"),historyPanel(group));popup.append(detail);return popup;};
+    const originalSpatialRankings=buildSpatialRankings;
+    buildSpatialRankings=function(rows,scale,minimum) {
+      const ranks=originalSpatialRankings(rows,scale,minimum), tie=(a,b)=>a.lat-b.lat || a.lon-b.lon;
+      ranks.deaths=ranks.all.filter(g=>g.deaths>0).sort((a,b)=>b.deaths-a.deaths || b.serious-a.serious || b.count-a.count || tie(a,b)).slice(0,5);
+      ranks.serious=ranks.all.filter(g=>g.serious>0).sort((a,b)=>b.serious-a.serious || b.deaths-a.deaths || b.count-a.count || tie(a,b)).slice(0,5);
+      ranks.deaths.forEach((g,i)=>g.deathRank=i+1);ranks.serious.forEach((g,i)=>g.seriousRank=i+1);
+      return ranks;
+    };
+    function renderVictimList(id,groups,metric) {
+      const fragment=document.createDocumentFragment(), prefix=metric==="deaths" ? "M" : "G";
+      if(!groups.length)fragment.append(makeNode("p","details-empty","Nenhum polo com vítimas deste indicador atende ao recorte."));
+      groups.forEach((g,i)=>{
+        const article=makeNode("article","km-row severe"), main=makeNode("div","km-main"), point=mapPosition(g);
+        const link=makeNode("a","",`${prefix}${i+1} · ${referenceLabel(g)} ↗`);link.href=streetViewUrl(point.lat,point.lon);link.target="_blank";link.rel="noopener noreferrer";
+        main.append(link,makeNode("span","km-meta",`${g.count} acidentes · ${g.deaths} mortos · ${g.serious} graves`));
+        const button=makeNode("button","locate-km","Localizar e ver histórico");button.type="button";button.addEventListener("click",()=>focusRankedGroup({...g,label:`${prefix}${i+1}`}));main.append(button);
+        article.append(makeNode("div","km-position",String(i+1).padStart(2,"0")),main,makeNode("strong","",numberBR.format(g[metric])));fragment.append(article);
+      });$(id).replaceChildren(fragment);
+    }
+    const originalRankedMarkers=renderRankedMarkers;
+    renderRankedMarkers=function(ranks) {
+      const metric=$("highlightMetric").value;
+      if(!metric || metric==="severe")return originalRankedMarkers(ranks);
+      const union=new Map();ranks.accidents.forEach(g=>union.set(g.key,g));ranks[metric].forEach(g=>union.set(g.key,g));
+      for(const g of union.values()) {
+        const rank=metric==="deaths" ? g.deathRank : g.seriousRank;
+        const badge=[g.accidentRank ? `A${g.accidentRank}` : "",rank ? `${metric==="deaths" ? "M" : "G"}${rank}` : ""].filter(Boolean).join(" · ");
+        const point=mapPosition(g),group={...g,label:badge};
+        const marker=L.marker([point.lat,point.lon],{icon:L.divIcon({className:"km-map-icon",html:`<span class="km-marker severe">${badge}</span>`,iconSize:[44,44],iconAnchor:[22,22]}),keyboard:true,title:`${badge} · ${referenceLabel(g)}`,zIndexOffset:1000}).addTo(state.map);
+        marker.bindPopup(spatialPopup(group),{maxWidth:350});marker.bindTooltip(`${badge} · ${referenceLabel(g)}`);marker.on("click",()=>pauseTimeline());state.layers.push(marker);
+      }
+    };
+    function priorityStats(groups,years) {
+      const median=xs=>{const a=xs.slice().sort((a,b)=>a-b);return a.length ? (a[Math.floor((a.length-1)/2)]+a[Math.floor(a.length/2)])/2 : 0;};
+      const frequency=median(groups.map(g=>g.count)),victims=median(groups.map(g=>g.deaths+g.serious).filter(n=>n>0));
+      return {frequency,victims,items:groups.map(g=>({...g,highFrequency:g.count>=frequency,highVictims:g.deaths+g.serious>0 && g.deaths+g.serious>=victims,persistent:years.length>1 && historyFor(g,years).filter(v=>v.count>=spatialMinimum()).length>=Math.ceil(years.length/2)}))};
+    }
+    function renderPriority(ranks) {
+      const stats=priorityStats(ranks.all,analysisYears());
+      setText("priorityContext",`${methodDescription()} · ${ranks.all.length} polos. Frequência alta: ≥ ${numberBR.format(stats.frequency)} acidentes. Severidade alta: ≥ ${numberBR.format(stats.victims)} vítimas (mortos + graves), sempre maior que zero. Persistente: mínimo de ocorrências em pelo menos metade dos anos. Clique para localizar e consultar o histórico.`);
+      const grid=$("priorityMatrix");grid.replaceChildren();
+      [[true,true,"Frequência e severidade altas"],[false,true,"Severidade alta · frequência menor"],[true,false,"Frequência alta · severidade menor"],[false,false,"Frequência e severidade menores"]].forEach(([f,v,title])=>{
+        const cell=makeNode("div",`priority-cell ${v ? "high-load" : ""}`),items=stats.items.filter(g=>g.highFrequency===f && g.highVictims===v).sort((a,b)=>Number(b.persistent)-Number(a.persistent) || b.deaths-a.deaths || b.serious-a.serious || b.count-a.count);
+        cell.append(makeNode("h3","",`${title} · ${items.length}`));
+        if(!items.length)cell.append(makeNode("p","field-note","Nenhum polo neste quadrante."));
+        items.forEach(g=>{const button=makeNode("button","priority-item",`${referenceLabel(g)}${g.persistent ? " · Persistente" : ""}\n${g.count} acidentes · ${g.deaths} mortos · ${g.serious} graves`);button.type="button";button.addEventListener("click",()=>{if(experience.mode==="poles")selectCluster(g);focusRankedGroup(g);});cell.append(button);});grid.append(cell);
+      });
+    }
+    const originalExperienceRows=renderExperienceRows;
+    renderExperienceRows=function(...args) {
+      originalExperienceRows(...args);renderVictimList("topDeaths",experience.ranks.deaths,"deaths");renderVictimList("topSerious",experience.ranks.serious,"serious");renderPriority(experience.ranks);
+      setText("rankingContext",`${args[2]} · ${methodDescription()}`);
+      const metric=$("highlightMetric").value;
+      if(metric==="deaths" || metric==="serious")setText("mapCaption",$("mapCaption").textContent.replace("A e S",metric==="deaths" ? "A e M" : "A e G").replace("S: severidade",metric==="deaths" ? "M: mortes" : "G: feridos graves"));
+      setText("rankCoverage",`${experience.ranks.mapped.length} ocorrências aptas; ${experience.ranks.all.reduce((s,g)=>s+g.count,0)} em polos. ${methodDescription()}. M = mortos; G = feridos graves. Pontos fora de polos não entram nos rankings.`);
+    };
+    const originalUpdateAnalysis=updateAnalysis;
+    updateAnalysis=function() {
+      originalUpdateAnalysis();
+      if(experience.mode==="poles") {renderPriority(buildSpatialRankings(state.filteredRows,spatialScale(),spatialMinimum()));setText("mapCaption",`${state.visibleClusters.length} polos · ${methodDescription()}`);}
+    };
+    $("clusterMethod").value="cells";$("highlightMetric").value="severe";
+    $("clusterMethod").addEventListener("change",()=>{
+      pauseTimeline();clearSelection();const db=$("clusterMethod").value==="dbscan";
+      setText("scaleLabel",db ? "Raio de vizinhança (metros)" : "Largura da célula espacial");
+      $("scaleNumber").setAttribute("aria-label",db ? "Raio de vizinhança em metros" : "Largura da célula em metros");
+      setText("methodHint",db ? "DBSCAN conecta vizinhanças densas. O raio não limita o diâmetro do polo: uma sequência de pontos pode formar um polo longo. A distância é em linha direta, não ao longo da rodovia." : "Células fixas: pontos em células vizinhas podem formar polos diferentes.");updateAnalysis();
+    });
+    $("highlightMetric").addEventListener("change",()=>{pauseTimeline();updateAnalysis();});
+    // Orientation landmarks only: never enter accident rows, centroids or rankings.
+    // Add further verified places here; latitude/longitude are representative site positions.
+    const LANDMARKS = Object.freeze([
+      {id:"fiat-betim",name:"FIAT · Stellantis",lat:-19.964670,lon:-44.110807,description:"Polo Automotivo Stellantis de Betim, conhecido como fábrica da FIAT. Posição de referência dentro do complexo industrial.",source:"https://www.pontosbr.com/construcoes/fabricas-e-industrias/fabrica-da-stellantis-fiat-em-betim/",sourceName:"PontosBR · coordenadas da fábrica",official:"https://www.fiat.com.br/institucional/programa_de_visitas.html"},
+      {id:"partage-betim",name:"Shopping Partage",lat:-19.96251,lon:-44.16007,description:"Partage Shopping Betim, na Rodovia Fernão Dias, 601, bairro São João. Posição representativa do edifício do shopping.",source:"https://mapcarta.com/pt/W682953665",sourceName:"Mapcarta / OpenStreetMap · edifício do shopping",official:"https://www.partagebetim.com.br/"}
+    ]);
+    const EXTRA_LANDMARKS = Object.freeze([
+      {id:"regap",name:"REGAP",lat:-19.972,lon:-44.096,category:"industry",minZoom:11,description:"Refinaria Gabriel Passos. Posição aproximada representativa da área industrial, não de uma portaria.",source:"https://repositorio.utfpr.edu.br/jspui/bitstream/1/1389/1/LD_PPGEA_M_Kawashima%2C%20Ana%20Beatriz_2015.pdf",sourceName:"UTFPR · tabela de coordenadas das refinarias",official:"https://petrobras.com.br/quem-somos/refinaria-gabriel-passos"},
+      {id:"monte-carmo",name:"Monte Carmo Shopping",lat:-19.95824,lon:-44.19086,category:"shopping",minZoom:12,description:"Shopping na Avenida Juiz Marco Túlio Isaac, 1119, Ingá Alto.",source:"https://mapcarta.com/pt/W606700930",sourceName:"Mapcarta / OpenStreetMap"},
+      {id:"unimed-betim",name:"Hospital Unimed",lat:-19.95864,lon:-44.17119,category:"health",minZoom:13,description:"Hospital Unimed Betim, Avenida Juiz Marco Túlio Isaac, 3400, Betim Industrial.",source:"https://mapcarta.com/pt/W699978046",sourceName:"Mapcarta / OpenStreetMap"},
+      {id:"regional-betim",name:"Hospital Regional",lat:-19.94873,lon:-44.19025,category:"health",minZoom:13,description:"Hospital Regional de Betim, Avenida Edméia Mattos Lazzarotti, 3800.",source:"https://mapcarta.com/W155514151",sourceName:"Mapcarta / OpenStreetMap"},
+      {id:"puc-betim",name:"PUC Minas · Betim",lat:-19.95482,lon:-44.19891,category:"education",minZoom:13,description:"PUC Minas, campus Betim, Rua do Rosário, 1081, Angola.",source:"https://mapcarta.com/pt/W155603630",sourceName:"Mapcarta / OpenStreetMap"}
+    ]);
+    const ALL_LANDMARKS=Object.freeze([...LANDMARKS.map(p=>({...p,category:p.id==="fiat-betim" ? "industry" : "shopping",minZoom:10})),...EXTRA_LANDMARKS]);
+    const POI_CATEGORIES={
+      industry:{color:"#657786",path:'<path d="M3 20V10l6 3V9l6 4V4h4v16H3Z"/><path d="M7 17h1m4 0h1m4 0h1"/>'},
+      shopping:{color:"#ba7418",path:'<path d="M5 8h14l1 12H4L5 8Z"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/>'},
+      health:{color:"#c64350",path:'<path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6V3Z"/>'},
+      education:{color:"#3574b8",path:'<path d="m2 8 10-5 10 5-10 5L2 8Zm4 3v6c4 3 8 3 12 0v-6m4-3v9"/>'}
+    };
+    let landmarkLayer=null, landmarkSatellite=true;
+    // Label-only decluttering: icons stay exactly at their verified coordinates.
+    function landmarkLayout(places,zoom,project) {
+      const points=places.map(p=>project(p)),used=[];
+      const overlaps=(a,b)=>a[0]<b[2] && a[2]>b[0] && a[1]<b[3] && a[3]>b[1];
+      return places.map((place,i)=>{
+        const {x,y}=points[i],w=place.name.length*7.5+8;
+        const candidates=[['right',[x+14,y-11,x+18+w,y+12]],['left',[x-18-w,y-11,x-14,y+12]],['top',[x-w/2,y-34,x+w/2,y-13]],['bottom',[x-w/2,y+13,x+w/2,y+34]]];
+        const chosen=zoom>=place.minZoom ? candidates.find(([,box])=>!used.some(b=>overlaps(box,b)) && !points.some((p,j)=>j!==i && overlaps(box,[p.x-12,p.y-12,p.x+12,p.y+12]))) : null;
+        if(chosen)used.push(chosen[1]);return {place,side:chosen?.[0]||"compact"};
+      });
+    }
+    function landmarkPopup(place) {
+      const popup=makeNode("div","landmark-popup");
+      popup.append(makeNode("strong","",place.name),makeNode("p","",place.description),makeNode("p","field-note","Ponto de referência para orientação. Não representa uma ocorrência e não participa dos cálculos do painel."));
+      for(const [label,url] of [["Abrir no Google Maps ↗",googleMapUrl(place.lat,place.lon,17)],["Site oficial ↗",place.official],[`Fonte: ${place.sourceName} ↗`,place.source]]) {
+        if(!url)continue;
+        const link=makeNode("a","",label);link.href=url;link.target="_blank";link.rel="noopener noreferrer";popup.append(link);
+      }
+      return popup;
+    }
+    function renderLandmarks() {
+      if(!state.mapReady)return;
+      if(landmarkLayer)state.map.removeLayer(landmarkLayer);
+      landmarkLayer=null;
+      if(!$("showLandmarks").checked)return;
+      const zoom=state.map.getZoom();
+      const project=p=>state.map.latLngToContainerPoint ? state.map.latLngToContainerPoint([p.lat,p.lon]) : {x:p.lon*100000,y:-p.lat*100000};
+      const markers=landmarkLayout(ALL_LANDMARKS,zoom,project).map(({place,side})=>{
+        const category=POI_CATEGORIES[place.category],label=makeNode("span","landmark-label");
+        label.style.setProperty ? label.style.setProperty("--poi-color",category.color) : label.style.color=category.color;
+        const symbol=makeNode("span","landmark-symbol");symbol.setAttribute("aria-hidden","true");
+        symbol.innerHTML=`<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">${category.path}</svg>`;
+        label.append(symbol,makeNode("span","landmark-name",place.name));
+        const icon=L.divIcon({className:`landmark-icon landmark-${side}${landmarkSatellite ? " landmark-satellite" : ""}`,html:label,iconSize:[20,20],iconAnchor:[10,10],popupAnchor:[0,-14]});
+        const marker=L.marker([place.lat,place.lon],{icon,keyboard:true,title:`Ponto de referência: ${place.name}`,alt:place.name,zIndexOffset:1800,riseOnHover:true});
+        marker.bindPopup(landmarkPopup(place),{maxWidth:300});
+        marker.on("click",()=>{pauseTimeline();setGoogleLinks(place.lat,place.lon,place.name);});
+        return marker;
+      });
+      landmarkLayer=L.layerGroup(markers).addTo(state.map);
+    }
+    function initialiseLandmarks() {
+      $("showLandmarks").addEventListener("change",renderLandmarks);
+      ALL_LANDMARKS.forEach(place=>{
+        const button=makeNode("button","",place.name);button.type="button";
+        button.setAttribute("aria-label",`Localizar ${place.name} no mapa`);
+        button.addEventListener("click",()=>{
+          pauseTimeline();$("showLandmarks").checked=true;renderLandmarks();setGoogleLinks(place.lat,place.lon,place.name);
+          if(state.mapReady){state.map.setView([place.lat,place.lon],16);L.popup({maxWidth:300}).setLatLng([place.lat,place.lon]).setContent(landmarkPopup(place)).openOn(state.map);}
+        });$("landmarkShortcuts").append(button);
+      });
+      renderLandmarks();
+    }
+    initialiseControls();
+    initialiseExperience();
+    initialiseMap();
+    updateAnalysis();
+    fitAnalysis();
+    initialiseLandmarks();
+    if(state.mapReady){
+      const syncZoomClass=()=>state.map.getContainer().classList.toggle("zoom-detail",state.map.getZoom()>=14);
+      state.map.on("zoomend",syncZoomClass); syncZoomClass();
+      state.map.on("zoomend",repositionRankedMarkers);
+      state.map.on("zoomend",renderLandmarks);
+      state.map.on("baselayerchange",event=>{landmarkSatellite=event.name==="Imagem aérea";renderLandmarks();});
+    }
+  </script>
+  <footer class="about-footer">
+    <details>
+      <summary>Sobre o painel, fonte dos dados e como citar</summary>
+      <p><strong>Projeto:</strong> Análise dos acidentes fatais na BR-381, no trecho de Betim (MG): abordagem descritiva,
+      modelagem preditiva e identificação das variáveis mais influentes utilizando técnicas de Machine Learning —
+      IFMG <em>Campus</em> Betim, Edital 162/2026.</p>
+      <p><strong>Equipe:</strong> Artur Gonçalves de Jesus (bolsista), Gabriela Oliveira (coordenadora, IFMG) e
+      Bruno Oliveira da Silva (CEFET-MG).</p>
+      <p><strong>Dados:</strong> Polícia Rodoviária Federal — dados abertos de acidentes (agrupados por ocorrência), 2017–2025,
+      rodovias BR-381 e BR-262 no município de Betim. Óbitos registrados apenas no local do acidente. Valores são
+      frequências, não taxas por volume de tráfego. Base gerada em <span id="aboutGenerated">—</span>.</p>
+      <p><strong>Desenvolvimento:</strong> o código do painel foi desenvolvido com apoio de ferramenta de inteligência
+      artificial generativa, sob supervisão e revisão dos autores. Mapa: Leaflet, com imagem aérea Esri e OpenStreetMap.</p>
+      <p><strong>Como citar:</strong> JESUS, A. G.; OLIVEIRA, G.; SILVA, B. O. <em>Painel espacial de acidentes nas rodovias
+      BR-381 e BR-262 em Betim (MG)</em>. Betim: IFMG, 2026. Disponível em: [endereço definitivo]. DOI: [DOI do Zenodo].</p>
+    </details>
+  </footer>
+  <style>
+    .about-footer { margin: 0 20px 24px; padding: 12px 18px; background: #fff; border-radius: 12px; color: #4a5560; font-size: 12.5px; box-shadow: 0 4px 14px rgba(24,42,56,.08); }
+    .about-footer summary { cursor: pointer; font-weight: 650; color: #123047; }
+    .about-footer p { margin: 8px 0; line-height: 1.5; }
+  </style>
+  <script>
+    (function () {
+      var el = document.getElementById("aboutGenerated");
+      if (el && window.DATA && window.DATA.meta && window.DATA.meta.generated) {
+        el.textContent = window.DATA.meta.generated.split("-").reverse().join("/");
+      }
+    })();
+  </script>
+</body>
+</html>
