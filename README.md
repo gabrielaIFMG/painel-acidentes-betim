@@ -1,77 +1,65 @@
 # Painel espacial de acidentes · BR-381 e BR-262 · Betim (MG)
 
-Painel interativo e rotina de análise dos acidentes registrados pela Polícia Rodoviária Federal (PRF)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23644596.svg)](https://doi.org/10.5281/zenodo.23644596)
+
+Painel interativo e rotina de análise dos acidentes de trânsito registrados pela Polícia Rodoviária Federal (PRF)
 nas rodovias BR-381 e BR-262, no município de Betim (MG), de 2017 a 2025.
 
-Projeto de pesquisa IFMG *Campus* Betim, Edital 162/2026.
-Equipe: Artur Gonçalves de Jesus, Gabriela Oliveira e Bruno Oliveira da Silva.
+**Acesse o painel:** https://gabrielaifmg.github.io/painel-acidentes-betim/painel/
 
-## Estrutura
+Projeto de pesquisa do IFMG *Campus* Betim (Edital 162/2026).
+Equipe: Artur Gonçalves de Jesus (IFMG), Gabriela Oliveira (IFMG) e Bruno Oliveira da Silva (CEFET-MG).
+
+## O que o painel mostra
+
+- **Polos espaciais:** áreas de 500 m que concentram acidentes, sobre imagem aérea, com o perfil de cada polo.
+- **Evolução no tempo:** animação mensal do acumulado de acidentes de 2017 a 2025.
+- **Rankings espaciais:** os polos com mais acidentes e com maior severidade, e uma matriz de prioridade
+  que combina frequência, severidade e persistência ao longo dos anos.
+
+Todos os mapas podem ser filtrados por ano, rodovia, causa, tipo, classificação e severidade do acidente.
+
+## Como citar
+
+JESUS, A. G.; OLIVEIRA, G.; SILVA, B. O. **Painel espacial de acidentes nas rodovias BR-381 e BR-262 em Betim (MG)**:
+dados, rotina de análise em R e painel interativo. Betim: IFMG, 2026. Disponível em:
+https://gabrielaifmg.github.io/painel-acidentes-betim/painel/. DOI: https://doi.org/10.5281/zenodo.23644596.
+
+## Conteúdo do repositório
 
 ```
-analise_capitulo_e_painel.R   rotina completa em R (capítulo + dados do painel)
-dados/                        planilhas da PRF (acidentesAAAA_por_ocorrencia.xlsx e acidentesAAAA_por_pessoa.xlsx),
-                              traçado das rodovias (rodovias_snv_betim.csv, SNV/DNIT 202308A) e pontos de referência
-resultados/
-  tabelas/                    Tabelas 1 a 3 do capítulo (.csv e .xlsx) e tabelas auxiliares
-  figuras/                    Figuras 1 a 4 do capítulo (.jpg, 300 dpi), incluindo o mapa dos trechos críticos
-  numeros_do_texto.txt        todos os valores citados no texto do capítulo
-painel/
-  index.html                  painel (HTML + JavaScript + Leaflet)
-  dados.js                    base do painel, gerada pelo script em R
+painel/                       painel interativo (index.html) e base de dados (dados.js)
+analise_capitulo_e_painel.R   rotina em R: tabelas, figuras e dados do painel
+dados/                        planilhas da PRF, traçado das rodovias (SNV/DNIT) e pontos de referência
+resultados/                   tabelas, figuras (300 dpi) e valores citados no capítulo
 ```
 
-## Como atualizar os dados
+## Como reproduzir a análise
 
-1. Coloque as planilhas da PRF na pasta `dados/` (para incluir um novo ano, ajuste `ANOS` no início do script).
-2. No R ou RStudio, com a pasta do projeto como diretório de trabalho, execute:
-   ```r
-   source("analise_capitulo_e_painel.R")
-   ```
-3. O script regrava as tabelas, as figuras e o arquivo `painel/dados.js`.
-   Basta publicar novamente o `dados.js`; o `index.html` não precisa ser alterado.
+No R, com a pasta do repositório como diretório de trabalho:
 
-Para testar o painel localmente, abra `painel/index.html` no navegador (é preciso conexão à internet
-para carregar o Leaflet e os mapas de fundo).
+```r
+source("analise_capitulo_e_painel.R")
+```
 
-## Publicação no GitHub Pages (endereço estável e gratuito)
+A rotina regrava as tabelas e as figuras em `resultados/` e a base do painel em `painel/dados.js`.
+Para incluir um novo ano, acrescente as planilhas da PRF em `dados/` e ajuste `ANOS` no início do script.
 
-1. Crie uma conta em https://github.com (de preferência com e-mail institucional).
-2. Crie um repositório público, por exemplo `painel-acidentes-betim`.
-3. Envie os arquivos deste projeto (botão *Add file → Upload files*). Recomenda-se **não** enviar as planilhas
-   brutas da PRF se o repositório ficar pesado; indique o link oficial dos dados abertos.
-4. Em *Settings → Pages*, em *Build and deployment*, escolha *Deploy from a branch*, a branch `main` e a pasta
-   `/ (root)`. Se preferir publicar só o painel, mova `index.html` e `dados.js` para uma pasta `docs/` e escolha `/docs`.
-5. Após alguns minutos, o painel ficará disponível em
-   `https://<usuario>.github.io/painel-acidentes-betim/painel/` (ou `/` se usar a pasta `docs`).
+## Dados e limitações
 
-## DOI permanente (Zenodo)
+- **Fonte:** PRF, dados abertos de acidentes (agrupados por ocorrência e por pessoa), 2017–2025:
+  https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos
+- **Traçado das rodovias:** Sistema Nacional de Viação (SNV/DNIT), versão 202308A.
+- **Coordenadas:** registros que perderam o separador decimal foram corrigidos; os que permaneceram fora do
+  município entram nos totais, mas não no mapa.
+- **Óbitos:** a PRF registra apenas os óbitos ocorridos no local do acidente.
+- **Frequências:** os valores são contagens de acidentes, e não taxas por volume de tráfego.
 
-1. Entre em https://zenodo.org com a conta do GitHub e ative o repositório em *GitHub → Repositories*.
-2. No GitHub, crie uma *release* (por exemplo, `v1.0`). O Zenodo arquiva automaticamente a versão e gera um DOI.
-3. Use o DOI para citar o painel e a rotina no capítulo do e-book e no artigo, e atualize a seção
-   "Sobre o painel" do `index.html` com o endereço definitivo e o DOI.
+## Uso de inteligência artificial
 
-## Leitura do painel
+O código do painel e partes da rotina de análise foram desenvolvidos com apoio de ferramentas de inteligência
+artificial generativa, sob supervisão e revisão dos autores.
 
-- Na aba de polos, os números aparecem nos 10 maiores polos; aproxime o mapa (zoom 14 ou mais) para ver todos.
-- A legenda no canto inferior esquerdo indica as faixas de acidentes por polo.
-- Os pontos de referência (shoppings, indústrias, hospitais) ficam desligados por padrão e podem ser ativados no menu lateral.
-- Nos rankings, marcadores muito próximos são afastados automaticamente; a linha branca indica a posição real do polo.
+## Licença
 
-## Observações metodológicas
-
-- **Agrupamento:** o painel agrupa as ocorrências apenas pelas coordenadas, em células fixas (padrão: 500 m,
-  mínimo de 5 ocorrências por polo), com a alternativa de agrupamento por densidade (DBSCAN).
-- **Coordenadas:** registros que perderam o separador decimal foram corrigidos por reescalonamento. Os que
-  permaneceram fora do município ficam sem posição: entram nos totais, mas não no mapa, nos polos ou nos rankings.
-- **Severidade:** é a maior gravidade observada no acidente. Acidentes sem feridos registrados, mas com
-  envolvidos de estado físico ignorado, são classificados como "Indeterminada".
-- **Limitações:** os óbitos são registrados apenas no local do acidente, e os valores são frequências,
-  não taxas por volume de tráfego.
-- **Uso de IA:** o código do painel e partes da rotina de análise foram desenvolvidos com apoio de ferramentas
-  de inteligência artificial generativa, sob supervisão e revisão dos autores.
-
-## Licença (sugestão)
-
-Código sob licença MIT; dados derivados sob CC BY 4.0, com crédito à PRF como fonte original.
+Código sob licença MIT (arquivo `LICENSE`). Dados derivados sob CC BY 4.0, com crédito à PRF como fonte original.
