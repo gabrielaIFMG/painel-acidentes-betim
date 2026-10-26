@@ -1,6 +1,6 @@
 # Painel espacial de acidentes · BR-381 e BR-262 · Betim (MG)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23644596.svg)](https://doi.org/10.5281/zenodo.23644596)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23644595.svg)](https://doi.org/10.5281/zenodo.23644595)
 
 Painel interativo e rotina de análise dos acidentes de trânsito registrados pela Polícia Rodoviária Federal (PRF)
 nas rodovias BR-381 e BR-262, no município de Betim (MG), de 2017 a 2025.
@@ -23,7 +23,7 @@ Todos os mapas podem ser filtrados por ano, rodovia, causa, tipo, classificaçã
 
 JESUS, A. G.; OLIVEIRA, G.; SILVA, B. O. **Painel espacial de acidentes nas rodovias BR-381 e BR-262 em Betim (MG)**:
 dados, rotina de análise em R e painel interativo. Betim: IFMG, 2026. Disponível em:
-https://gabrielaifmg.github.io/painel-acidentes-betim/painel/. DOI: https://doi.org/10.5281/zenodo.23644596.
+https://gabrielaifmg.github.io/painel-acidentes-betim/painel/. DOI: https://doi.org/10.5281/zenodo.23644595.
 
 ## Conteúdo do repositório
 
