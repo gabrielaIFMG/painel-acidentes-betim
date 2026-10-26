@@ -451,6 +451,13 @@
     }
     .cluster-count-label.leaflet-tooltip::before { display: none; }
     .cluster-count-label.minor { color: #17313d; font-size: 9px; }
+    .leaflet-container:not(.zoom-detail) .cluster-count-label.secondary { display: none !important; }
+    .polos-legend { background: rgba(255,255,255,.94); border-radius: 10px; padding: 9px 11px; box-shadow: 0 2px 10px rgba(0,0,0,.25);
+      font: 12px/1.35 system-ui, sans-serif; color: #17313d; max-width: 230px; }
+    .polos-legend strong { display: block; margin-bottom: 5px; font-size: 12.5px; }
+    .polos-legend span { display: inline-flex; align-items: center; gap: 5px; margin: 0 10px 4px 0; }
+    .polos-legend i { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
+    .polos-legend small { display: block; margin-top: 4px; color: #4a5560; font-size: 11px; }
 
     .centroid-leaflet-icon { background: transparent; border: 0; }
     .centroid-crosshair {
@@ -756,7 +763,7 @@
 
         <section class="section" aria-label="Locais conhecidos">
           <div class="section-title"><h2>Pontos de referência</h2></div>
-          <label class="check-row"><input id="showLandmarks" type="checkbox" checked><span>Mostrar nomes de locais conhecidos</span></label>
+          <label class="check-row"><input id="showLandmarks" type="checkbox"><span>Mostrar nomes de locais conhecidos</span></label>
           <p class="field-note">Ícones pequenos e nomes identificam locais, não acidentes. Compras em laranja, saúde em vermelho, ensino em azul e indústria em cinza. Aproxime o mapa para ver mais nomes; passe o mouse ou toque em um ícone para identificar o local.</p>
           <div id="landmarkShortcuts" class="landmark-shortcuts"></div>
           <p class="field-note">Posições aproximadas dos locais; não indicam portarias ou acessos. Fontes disponíveis ao clicar. Referências cartográficas: © colaboradores do OpenStreetMap (ODbL), via Mapcarta, e fontes indicadas nos detalhes.</p>
@@ -794,7 +801,7 @@
         <section class="kpis" aria-label="Resumo dos resultados">
           <article class="kpi"><div class="kpi-label">Ocorrências filtradas</div><div id="kpiTotal" class="kpi-value">—</div><div id="kpiTotalSub" class="kpi-sub">—</div></article>
           <article class="kpi"><div class="kpi-label">Aptas ao mapa</div><div id="kpiMapped" class="kpi-value">—</div><div class="kpi-sub">após a triagem geográfica</div></article>
-          <article class="kpi"><div class="kpi-label">Fora do mapa</div><div id="kpiUnmapped" class="kpi-value">—</div><div class="kpi-sub">preservadas no banco original</div></article>
+          <article class="kpi"><div class="kpi-label">Fora do mapa</div><div id="kpiUnmapped" class="kpi-value">—</div><div class="kpi-sub">sem localização confiável · entram nos totais</div></article>
           <article class="kpi hot"><div class="kpi-label">Polos identificados</div><div id="kpiPoles" class="kpi-value">—</div><div id="kpiPolesSub" class="kpi-sub">mínimo de 5 ocorrências</div></article>
           <article class="kpi hot"><div class="kpi-label">Maior polo</div><div id="kpiMax" class="kpi-value">—</div><div class="kpi-sub">ocorrências no mesmo grupo</div></article>
         </section>
@@ -862,7 +869,7 @@
             <article id="googlePanel" class="card panel-card">
               <header class="card-head">
                 <div><h2>Visualizações Google</h2><p>Links oficiais para o ponto selecionado</p></div>
-                <span class="card-badge">sem chave</span>
+                <span class="card-badge">links externos</span>
               </header>
               <div class="street-wrap">
                 <div class="google-actions">
@@ -1167,7 +1174,7 @@
       setText("kpiMax", numberBR.format(state.visibleClusters[0]?.count || 0));
       setText("kpiTotalSub", `de ${numberBR.format(DATA.meta.total)} registros`);
       setText("kpiPolesSub", `mínimo de ${numberBR.format(minimum)} ocorrências`);
-      setText("mapCaption", `${numberBR.format(state.visibleClusters.length)} polos · célula de ${numberBR.format(scale)} m`);
+      setText("mapCaption", `${numberBR.format(state.visibleClusters.length)} polos · áreas de ${numberBR.format(scale)} m`);
 
       // Recalculate the selected profile whenever filters or geographic eligibility change.
       if (state.selectedKey) clearSelection();
@@ -1188,6 +1195,7 @@
       if (!state.map) return;
       state.layers.forEach(layer => state.map.removeLayer(layer));
       state.layers = [];
+      removePolosLegend();
     }
 
     function removeCentroidMarker() {
@@ -1228,27 +1236,29 @@
       const showMinor = $("showMinor").checked;
       const clustersToDraw = showMinor ? state.clusters : state.visibleClusters;
       const maxCount = state.visibleClusters[0]?.count || state.clusters[0]?.count || 1;
+      // Rótulo permanente só nos 10 maiores polos; os demais aparecem ao aproximar o mapa (zoom >= 14).
+      const topKeys = new Set([...state.visibleClusters].sort((a, b) => b.count - a.count).slice(0, 10).map(c => c.key));
 
       clustersToDraw.forEach(cluster => {
         const point=mapPosition(cluster);
         const minor = cluster.count < minimum;
         const colour = colourForCluster(cluster.count, maxCount, minor);
         const ratio = Math.sqrt(cluster.count / Math.max(1, maxCount));
-        const radius = minor ? 8 : Math.round(11 + 21 * ratio);
+        const radius = minor ? 6 : Math.round(8 + 16 * ratio);
         const selected = state.selectedKey === cluster.key;
         const circle = L.circleMarker([point.lat, point.lon], {
           radius,
           color: selected ? "#0d7b74" : "#ffffff",
           weight: selected ? 5 : 2,
           fillColor: colour,
-          fillOpacity: minor ? .58 : .96,
+          fillOpacity: minor ? .5 : .8,
           opacity: 1,
           interactive: !minor
         }).addTo(state.map);
         circle.bindTooltip(numberBR.format(cluster.count), {
           permanent: true,
           direction: "center",
-          className: `cluster-count-label${minor ? " minor" : ""}`,
+          className: `cluster-count-label${minor ? " minor" : ""}${!minor && topKeys.has(cluster.key) ? "" : " secondary"}`,
           opacity: 1
         });
         if (!minor) circle.on("click", event => {
@@ -1257,6 +1267,31 @@
         });
         state.layers.push(circle);
       });
+      addPolosLegend(maxCount);
+    }
+
+    // ---------- Legenda da aba de polos
+    let polosLegend = null;
+    function removePolosLegend() {
+      if (polosLegend && state.map) state.map.removeControl(polosLegend);
+      polosLegend = null;
+    }
+    function addPolosLegend(maxCount) {
+      if (!state.mapReady) return;
+      removePolosLegend();
+      const lim = t => Math.max(1, Math.round(t * t * maxCount));
+      const faixas = [["#f2ad3e", `até ${lim(.38)}`], ["#ed862f", `${lim(.38) + 1} a ${lim(.6)}`],
+                      ["#dc542e", `${lim(.6) + 1} a ${lim(.82)}`], ["#b92f2f", `mais de ${lim(.82)}`]];
+      polosLegend = L.control({ position: "bottomleft" });
+      polosLegend.onAdd = () => {
+        const div = L.DomUtil.create("div", "polos-legend");
+        div.innerHTML = `<strong>Acidentes em cada polo</strong>` +
+          faixas.map(([cor, txt]) => `<span><i style="background:${cor}"></i>${txt}</span>`).join("") +
+          `<small>Quanto maior e mais escuro o círculo, mais acidentes na área. Os números aparecem nos 10 maiores polos; aproxime o mapa para ver os demais.</small>`;
+        L.DomEvent.disableClickPropagation(div);
+        return div;
+      };
+      polosLegend.addTo(state.map);
     }
 
     function countBy(rows, field) {
@@ -1655,8 +1690,38 @@
       L.popup({maxWidth:310}).setLatLng([point.lat,point.lon]).setContent(spatialPopup(group)).openOn(state.map);
     }
 
+    // Marcadores que se sobrepõem são afastados com linha de chamada; o arranjo é refeito a cada zoom.
+    let rankedEntries=[];
+    function repositionRankedMarkers() {
+      if (!state.mapReady || !rankedEntries.length) return;
+      const placed=[];
+      const livre=q=>placed.every(r=>Math.hypot(q.x-r.x,q.y-r.y)>=48);
+      rankedEntries.forEach(e=>{
+        if (!state.map.hasLayer(e.marker)) return;
+        const p0=state.map.latLngToContainerPoint(e.base);
+        let p=p0;
+        if (!livre(p0)) {
+          busca: for (const raio of [54,80,106]) for (let k=0;k<8;k++) {
+            const ang=-Math.PI/2+k*Math.PI/4, q=L.point(p0.x+raio*Math.cos(ang),p0.y+raio*Math.sin(ang));
+            if (livre(q)) { p=q; break busca; }
+          }
+        }
+        placed.push(p);
+        if (p===p0) {
+          e.marker.setLatLng(e.base);
+          if (state.map.hasLayer(e.leader)) state.map.removeLayer(e.leader);
+          if (state.map.hasLayer(e.anchor)) state.map.removeLayer(e.anchor);
+        } else {
+          const pos=state.map.containerPointToLatLng(p);
+          e.marker.setLatLng(pos); e.leader.setLatLngs([e.base,pos]);
+          if (!state.map.hasLayer(e.leader)) e.leader.addTo(state.map);
+          if (!state.map.hasLayer(e.anchor)) e.anchor.addTo(state.map);
+        }
+      });
+    }
     function renderRankedMarkers(ranks) {
       if (!state.mapReady) return;
+      rankedEntries=[];
       const unique=new Map();
       [...ranks.accidents,...ranks.severe].forEach(group=>unique.set(group.key,group));
       for (const group of unique.values()) {
@@ -1664,12 +1729,18 @@
         const badge = rankingBadges(group);
         const point=mapPosition(group);
         const icon=L.divIcon({className:"km-map-icon",html:`<span class="km-marker ${a&&s ? "dual" : s ? "severe" : ""}">${badge}</span>`,iconSize:[44,44],iconAnchor:[22,22]});
-        const marker=L.marker([point.lat,point.lon],{icon,keyboard:true,title:`${badge} · ${referenceLabel(group)}${point.projected ? " · eixo rodoviário" : " · centróide"}`,zIndexOffset:1000}).addTo(state.map);
+        const base=L.latLng(point.lat,point.lon);
+        const leader=L.polyline([base,base],{color:"#ffffff",weight:2,opacity:.95,interactive:false});
+        const anchor=L.circleMarker(base,{radius:3.5,color:"#ffffff",weight:1.5,fillColor:"#123047",fillOpacity:1,interactive:false});
+        state.layers.push(leader,anchor);
+        const marker=L.marker(base,{icon,keyboard:true,title:`${badge} · ${referenceLabel(group)}${point.projected ? " · eixo rodoviário" : " · centróide"}`,zIndexOffset:1000}).addTo(state.map);
+        rankedEntries.push({base,marker,leader,anchor});
         marker.bindPopup(spatialPopup(group),{maxWidth:310});
         marker.bindTooltip(makeNode("div","",`${group.label} · ${referenceLabel(group)} (referência)`));
         marker.on("click",()=>pauseTimeline());
         state.layers.push(marker);
       }
+      repositionRankedMarkers();
     }
 
     function renderOccurrencePoints(rows) {
@@ -1690,11 +1761,12 @@
     function renderCumulativeCircles(clusters, title) {
       if (!state.mapReady) return;
       // Draw every occupied cell, including those below the ranking threshold, so no accumulated events vanish.
+      const topGroups=new Set([...clusters].sort((a,b)=>b.count-a.count).slice(0,10));
       clusters.forEach(group=>{
         const belowMinimum=group.count<spatialMinimum();
         const point=mapPosition(group);
         const circle=L.circleMarker([point.lat,point.lon],cumulativeCircleStyle(group.count,belowMinimum)).addTo(state.map);
-        circle.bindTooltip(numberBR.format(group.count),{permanent:true,direction:"center",className:"cluster-count-label",opacity:1});
+        circle.bindTooltip(numberBR.format(group.count),{permanent:true,direction:"center",className:`cluster-count-label${topGroups.has(group) ? "" : " secondary"}`,opacity:1});
         const popup=makeNode("div","km-popup");
         popup.append(makeNode("strong","",`${numberBR.format(group.count)} acidentes acumulados`),makeNode("div","",title),makeNode("div","",`${group.rows.reduce((s,r)=>s+r[R.DEATHS],0)} mortos · ${group.rows.reduce((s,r)=>s+r[R.SERIOUS],0)} feridos graves`));
         appendPositionDetails(popup,group);
@@ -1890,7 +1962,7 @@
     buildClusters=function(rows,scale,minimum=spatialMinimum()) {
       return $("clusterMethod").value==="dbscan" ? dbscanClusters(rows,scale,minimum) : cellClusters(rows,scale);
     };
-    function methodDescription() {return `${$("clusterMethod").value==="dbscan" ? "DBSCAN · raio" : "Células · largura"} ${numberBR.format(spatialScale())} m`;}
+    function methodDescription() {return `${$("clusterMethod").value==="dbscan" ? "Agrupamento por proximidade · raio" : "Áreas de"} ${numberBR.format(spatialScale())} m`;}
     function historyFor(group,years) {
       return years.map(year=>{const rows=group.rows.filter(r=>r[R.YEAR]===year);return {year,count:rows.length,deaths:rows.reduce((s,r)=>s+(+r[R.DEATHS]||0),0),serious:rows.reduce((s,r)=>s+(+r[R.SERIOUS]||0),0)};});
     }
@@ -2066,6 +2138,9 @@
     fitAnalysis();
     initialiseLandmarks();
     if(state.mapReady){
+      const syncZoomClass=()=>state.map.getContainer().classList.toggle("zoom-detail",state.map.getZoom()>=14);
+      state.map.on("zoomend",syncZoomClass); syncZoomClass();
+      state.map.on("zoomend",repositionRankedMarkers);
       state.map.on("zoomend",renderLandmarks);
       state.map.on("baselayerchange",event=>{landmarkSatellite=event.name==="Imagem aérea";renderLandmarks();});
     }
@@ -2073,9 +2148,9 @@
   <footer class="about-footer">
     <details>
       <summary>Sobre o painel, fonte dos dados e como citar</summary>
-      <p><strong>Projeto:</strong> Análise dos acidentes fatais nas rodovias BR-381 e BR-262, no trecho de Betim (MG): abordagem descritiva,
+      <p><strong>Projeto:</strong> Análise dos acidentes fatais na BR-381, no trecho de Betim (MG): abordagem descritiva,
       modelagem preditiva e identificação das variáveis mais influentes utilizando técnicas de Machine Learning —
-      IFMG <em>Campus</em> Betim, Edital 162/2026.</p>
+      IFMG <em>Campus</em> Betim, Edital 162/2026. O recorte de análise inclui também a BR-262 no município.</p>
       <p><strong>Equipe:</strong> Artur Gonçalves de Jesus (bolsista), Gabriela Oliveira (coordenadora, IFMG) e
       Bruno Oliveira da Silva (CEFET-MG).</p>
       <p><strong>Dados:</strong> Polícia Rodoviária Federal — dados abertos de acidentes (agrupados por ocorrência), 2017–2025,
@@ -2084,7 +2159,7 @@
       <p><strong>Desenvolvimento:</strong> o código do painel foi desenvolvido com apoio de ferramenta de inteligência
       artificial generativa, sob supervisão e revisão dos autores. Mapa: Leaflet, com imagem aérea Esri e OpenStreetMap.</p>
       <p><strong>Como citar:</strong> JESUS, A. G.; OLIVEIRA, G.; SILVA, B. O. <em>Painel espacial de acidentes nas rodovias
-      BR-381 e BR-262 em Betim (MG)</em>. Betim: IFMG, 2026. Disponível em: https://gabrielaifmg.github.io/painel-acidentes-betim/painel/. DOI: https://doi.org/10.5281/zenodo.23644595.</p>
+      BR-381 e BR-262 em Betim (MG)</em>. Betim: IFMG, 2026. Disponível em: https://gabrielaifmg.github.io/painel-acidentes-betim/painel/. DOI: https://doi.org/10.5281/zenodo.23644596.</p>
     </details>
   </footer>
   <style>
