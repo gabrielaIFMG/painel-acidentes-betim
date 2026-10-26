@@ -457,7 +457,17 @@
     .polos-legend strong { display: block; margin-bottom: 5px; font-size: 12.5px; }
     .polos-legend span { display: inline-flex; align-items: center; gap: 5px; margin: 0 10px 4px 0; }
     .polos-legend i { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
-    .polos-legend small { display: block; margin-top: 4px; color: #4a5560; font-size: 11px; }
+    .polos-legend small { display: none; margin-top: 4px; color: #4a5560; font-size: 11px; }
+    .polos-legend.show-help small { display: block; }
+    .polos-legend strong { cursor: pointer; }
+    .legend-help { font-weight: 400; color: #0d7b74; }
+    .map-fullscreen-btn { width: 34px; height: 34px; border: 2px solid rgba(0,0,0,.2); border-radius: 4px; background: #fff;
+      font-size: 18px; line-height: 1; cursor: pointer; color: #123047; }
+    .map-fullscreen-btn:hover { background: #f1f4f6; }
+    .map-card:fullscreen { width: 100vw; height: 100vh !important; border-radius: 0; background: #000; }
+    .map-card.map-expanded { position: fixed !important; inset: 0; z-index: 5000; height: 100vh !important; border-radius: 0; }
+    .map-card:fullscreen #map, .map-card.map-expanded #map { height: 100% !important; min-height: 0 !important; }
+    .landmark-compact .landmark-symbol { opacity: .85; transform: scale(.85); }
 
     .centroid-leaflet-icon { background: transparent; border: 0; }
     .centroid-crosshair {
@@ -559,7 +569,7 @@
     .view-tab:not(.active):hover { background: #edf3f4; }
     .view-switch > .button { margin-right: 3px; }
     /* Compact viewport-height map, matching the visible area in the supplied reference. */
-    :root { --map-panel-height: clamp(380px, calc(100dvh - 255px), 600px); }
+    :root { --map-panel-height: clamp(420px, calc(100dvh - 230px), 900px); }
     .workspace { flex: none; height: var(--map-panel-height); min-height: 0; grid-template-columns: minmax(380px, 1fr) minmax(360px, 430px); }
     .main[data-mode="poles"] .workspace, .main:not([data-mode="poles"]) .workspace { height: var(--map-panel-height); flex: none; }
     .main:not([data-mode="poles"]) .side-stack { display: none; }
@@ -1285,10 +1295,11 @@
       polosLegend = L.control({ position: "bottomright" });
       polosLegend.onAdd = () => {
         const div = L.DomUtil.create("div", "polos-legend");
-        div.innerHTML = `<strong>Acidentes em cada polo</strong>` +
+        div.innerHTML = `<strong title="Clique para ver como ler o mapa">Acidentes em cada polo <span class="legend-help">ⓘ</span></strong>` +
           faixas.map(([cor, txt]) => `<span><i style="background:${cor}"></i>${txt}</span>`).join("") +
           `<small>Quanto maior e mais escuro o círculo, mais acidentes na área. Os números aparecem nos 10 maiores polos; aproxime o mapa para ver os demais.</small>`;
         L.DomEvent.disableClickPropagation(div);
+        div.querySelector("strong").addEventListener("click", () => div.classList.toggle("show-help"));
         return div;
       };
       polosLegend.addTo(state.map);
@@ -2070,7 +2081,7 @@
       {id:"regional-betim",name:"Hospital Regional",lat:-19.94873,lon:-44.19025,category:"health",minZoom:13,description:"Hospital Regional de Betim, Avenida Edméia Mattos Lazzarotti, 3800.",source:"https://mapcarta.com/W155514151",sourceName:"Mapcarta / OpenStreetMap"},
       {id:"puc-betim",name:"PUC Minas · Betim",lat:-19.95482,lon:-44.19891,category:"education",minZoom:13,description:"PUC Minas, campus Betim, Rua do Rosário, 1081, Angola.",source:"https://mapcarta.com/pt/W155603630",sourceName:"Mapcarta / OpenStreetMap"}
     ]);
-    const ALL_LANDMARKS=Object.freeze([...LANDMARKS.map(p=>({...p,category:p.id==="fiat-betim" ? "industry" : "shopping",minZoom:10})),...EXTRA_LANDMARKS]);
+    const ALL_LANDMARKS=Object.freeze([...LANDMARKS.map(p=>({...p,category:p.id==="fiat-betim" ? "industry" : "shopping",minZoom:10})),...EXTRA_LANDMARKS].map(p=>({...p,minZoom:15})));
     const POI_CATEGORIES={
       industry:{color:"#657786",path:'<path d="M3 20V10l6 3V9l6 4V4h4v16H3Z"/><path d="M7 17h1m4 0h1m4 0h1"/>'},
       shopping:{color:"#ba7418",path:'<path d="M5 8h14l1 12H4L5 8Z"/><path d="M8 9V6a4 4 0 0 1 8 0v3"/>'},
@@ -2138,6 +2149,25 @@
     fitAnalysis();
     initialiseLandmarks();
     if(state.mapReady){
+      state.map.options.zoomSnap=0.25; state.map.options.zoomDelta=0.5; fitAnalysis(); // enquadramento mais justo
+      const cartao=state.map.getContainer().closest(".map-card");
+      const ajustar=()=>setTimeout(()=>{state.map.invalidateSize(); if(typeof fitAnalysis==="function") fitAnalysis();},250);
+      const telaCheia=L.control({position:"topleft"});
+      telaCheia.onAdd=()=>{
+        const btn=L.DomUtil.create("button","map-fullscreen-btn");
+        btn.type="button"; btn.title="Ver o mapa em tela cheia"; btn.setAttribute("aria-label","Ver o mapa em tela cheia");
+        btn.innerHTML="⛶";
+        L.DomEvent.disableClickPropagation(btn);
+        btn.addEventListener("click",()=>{
+          if(document.fullscreenElement){ document.exitFullscreen(); }
+          else if(cartao.requestFullscreen && document.fullscreenEnabled){ cartao.requestFullscreen(); }
+          else { cartao.classList.toggle("map-expanded"); ajustar(); }
+        });
+        return btn;
+      };
+      telaCheia.addTo(state.map);
+      document.addEventListener("fullscreenchange",ajustar);
+      document.addEventListener("keydown",e=>{ if(e.key==="Escape" && cartao.classList.contains("map-expanded")){ cartao.classList.remove("map-expanded"); ajustar(); } });
       const syncZoomClass=()=>state.map.getContainer().classList.toggle("zoom-detail",state.map.getZoom()>=14);
       state.map.on("zoomend",syncZoomClass); syncZoomClass();
       state.map.on("zoomend",repositionRankedMarkers);
