@@ -452,7 +452,7 @@
     .cluster-count-label.leaflet-tooltip::before { display: none; }
     .cluster-count-label.minor { color: #17313d; font-size: 9px; }
     .leaflet-container:not(.zoom-detail) .cluster-count-label.secondary { display: none !important; }
-    .polos-legend { background: rgba(255,255,255,.94); border-radius: 10px; padding: 9px 11px; box-shadow: 0 2px 10px rgba(0,0,0,.25);
+    .polos-legend { margin-bottom: 6px !important; background: rgba(255,255,255,.94); border-radius: 10px; padding: 9px 11px; box-shadow: 0 2px 10px rgba(0,0,0,.25);
       font: 12px/1.35 system-ui, sans-serif; color: #17313d; max-width: 230px; }
     .polos-legend strong { display: block; margin-bottom: 5px; font-size: 12.5px; }
     .polos-legend span { display: inline-flex; align-items: center; gap: 5px; margin: 0 10px 4px 0; }
@@ -1282,7 +1282,7 @@
       const lim = t => Math.max(1, Math.round(t * t * maxCount));
       const faixas = [["#f2ad3e", `até ${lim(.38)}`], ["#ed862f", `${lim(.38) + 1} a ${lim(.6)}`],
                       ["#dc542e", `${lim(.6) + 1} a ${lim(.82)}`], ["#b92f2f", `mais de ${lim(.82)}`]];
-      polosLegend = L.control({ position: "bottomleft" });
+      polosLegend = L.control({ position: "bottomright" });
       polosLegend.onAdd = () => {
         const div = L.DomUtil.create("div", "polos-legend");
         div.innerHTML = `<strong>Acidentes em cada polo</strong>` +
