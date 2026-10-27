@@ -1638,10 +1638,14 @@
 
     function spatialScale() { return Math.max(100, Number($("scaleNumber").value)||CLUSTER_DEFAULTS.scaleMeters); }
     function spatialMinimum() { return Math.max(1, Number($("minimumNumber").value)||CLUSTER_DEFAULTS.minOccurrences); }
+    // Rótulo do polo: rodovia mais frequente e km MEDIANO das ocorrências do polo
+    // (o mesmo critério da lista "Polos com mais ocorrências"; antes usava o km de uma única ocorrência).
     function referenceLabel(group) {
-      const row = group.representative;
-      const br = Number.isFinite(row[R.BR]) ? `BR-${String(row[R.BR]).padStart(3,"0")}` : "BR não informada";
-      const km = Number.isFinite(row[R.KM]) ? `km ${numberBR.format(row[R.KM])}` : "km não informado";
+      const rows = group.rows && group.rows.length ? group.rows : [group.representative];
+      const roads = countBy(rows, R.BR);
+      const br = roads[0] && Number.isFinite(Number(roads[0][0])) ? `BR-${String(roads[0][0]).padStart(3,"0")}` : "BR não informada";
+      const kms = rows.map(r => r[R.KM]).filter(Number.isFinite).sort((x, y) => x - y);
+      const km = kms.length ? `km ${numberBR.format(kms[Math.floor(kms.length / 2)])}` : "km não informado";
       return `${br} · ${km}`;
     }
 
