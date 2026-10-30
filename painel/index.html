@@ -785,7 +785,7 @@
           <p id="geographicSummary" class="quality-summary" aria-live="polite"></p>
           <label class="check-row"><input id="showRoadReference" type="checkbox"><span>Mostrar traçado de referência no mapa</span></label>
           <label class="check-row"><input id="snapCentroids" type="checkbox" checked><span>Alinhar os marcadores dos polos ao eixo da rodovia</span></label>
-          <p class="field-note">Ajuste apenas visual: projeção do centróide no segmento mais próximo do traçado SNV, sem alterar os registros nem as contagens. A geometria é aproximada e não determina a faixa de tráfego.</p>
+          <p class="field-note">Ajuste apenas visual: projeção do centroide no segmento mais próximo do traçado SNV, sem alterar os registros nem as contagens. A geometria é aproximada e não determina a faixa de tráfego.</p>
           <button id="downloadGeographicAudit" class="button secondary small" type="button">Baixar registros sinalizados · CSV</button>
           <details class="method-details"><summary>Fonte e tratamento</summary><p>Geometria SNV/DNIT, versão <strong>202308A</strong>, disponibilizada pelo <a href="https://observatorio.infraestrutura.mg.gov.br/server/rest/services/Hosted/Rodovias_DNIT/FeatureServer/0" target="_blank" rel="noopener noreferrer">Observatório de Infraestrutura de MG</a>, consultada em 03/09/2026. Recorte local dos trechos pavimentados das BRs 262 e 381, incluindo contornos e coincidências.</p><p>Coordenadas que perderam o separador decimal no registro original (por exemplo, -2005039xxx) foram corrigidas por reescalonamento; as que permaneceram fora dos limites do município ficaram sem posição e aparecem como “fora do mapa”. Nenhuma quilometragem foi alterada. A distância excessiva é uma indicação para revisão, não prova de erro. A base de referência pode não refletir mudanças posteriores a 2023. Os registros ocultos permanecem no total filtrado, mas não integram polos nem rankings espaciais. O arquivo CSV preserva a coordenada original e informa o motivo da sinalização.</p></details>
         </section>
@@ -796,9 +796,9 @@
             <span class="legend-dot low" aria-hidden="true"></span><span>Polo com menos ocorrências</span>
             <span class="legend-dot high" aria-hidden="true"></span><span>Polo com maior concentração</span>
           </div>
-          <p class="field-note">O número no círculo é a quantidade de acidentes do polo após os filtros. Com o alinhamento ativado, o círculo fica na projeção do centróide sobre o eixo da rodovia. O centróide calculado permanece disponível nos detalhes.</p>
+          <p class="field-note">O número no círculo é a quantidade de acidentes do polo após os filtros. Com o alinhamento ativado, o círculo fica na projeção do centroide sobre o eixo da rodovia. O centroide calculado permanece disponível nos detalhes.</p>
         </section>
-        <section id="spatialLegend" class="section" hidden><div class="section-title"><h2>Como ler os rankings</h2></div><p class="field-note"><strong>A</strong>: acidentes. <strong>S</strong>: combinado, mortes primeiro. <strong>M</strong>: mortes. <strong>G</strong>: feridos graves. Os números de 1 a 5 indicam a posição em cada lista. Escolha o par de destaques abaixo dos rankings. Duas letras no mesmo marcador indicam presença nas duas listas. Com o alinhamento ativado, os marcadores ficam no eixo rodoviário mais próximo do centróide.</p><p class="field-note">O km informado é uma referência do registro representativo, não o critério de agrupamento.</p></section>
+        <section id="spatialLegend" class="section" hidden><div class="section-title"><h2>Como ler os rankings</h2></div><p class="field-note"><strong>A</strong>: acidentes. <strong>S</strong>: combinado, mortes primeiro. <strong>M</strong>: mortes. <strong>G</strong>: feridos graves. Os números de 1 a 5 indicam a posição em cada lista. Escolha o par de destaques abaixo dos rankings. Duas letras no mesmo marcador indicam presença nas duas listas. Com o alinhamento ativado, os marcadores ficam no eixo rodoviário mais próximo do centroide.</p><p class="field-note">O km informado é uma referência do registro representativo, não o critério de agrupamento.</p></section>
       </aside>
 
       <main class="main" data-mode="poles">
@@ -857,7 +857,7 @@
                   </div>
                   <div id="poleHistory" class="pole-history"></div>
                   <div class="detail-list">
-                    <div class="detail-item"><span>Centróide calculado · original</span><strong id="detailCentroid">—</strong></div>
+                    <div class="detail-item"><span>Centroide calculado · original</span><strong id="detailCentroid">—</strong></div>
                     <div class="detail-item"><span>Posição exibida no mapa</span><strong id="detailMapPosition">—</strong></div>
                     <div class="detail-item"><span>Causa predominante das mortes</span><strong id="detailDeathCause">-</strong></div>
                     <div class="detail-item"><span>Causa predominante dos feridos graves</span><strong id="detailSeriousCause">-</strong></div>
@@ -917,7 +917,7 @@
               <label class="field-note" for="highlightMetric">Destaques no mapa e na animação</label>
               <select id="highlightMetric" class="select"><option value="severe">A + S · acidentes e severidade combinada</option><option value="deaths">A + M · acidentes e mortes</option><option value="serious">A + G · acidentes e feridos graves</option></select>
               <p id="rankCoverage" class="rank-footnote"></p>
-              <p class="rank-footnote">Clique no <strong>polo ↗</strong> para abrir o Google Street View na posição exibida no mapa. Com o alinhamento ativado, essa posição é projetada sobre o eixo rodoviário. A referência de BR/km vem do registro mais próximo do centróide; ela não participa do agrupamento e pode conter erro de anotação. A imagem depende da cobertura do Google e não corresponde à data do acidente.</p>
+              <p class="rank-footnote">Clique no <strong>polo ↗</strong> para abrir o Google Street View na posição exibida no mapa. Com o alinhamento ativado, essa posição é projetada sobre o eixo rodoviário. A referência de BR/km é o km mediano das ocorrências do polo; ela não participa do agrupamento e pode refletir erros de anotação do km. A imagem depende da cobertura do Google e não corresponde à data do acidente.</p>
 <details class="method-details"><summary>Critérios e limites da análise</summary><p>Somente latitude e longitude determinam o agrupamento. Escolha células fixas ou DBSCAN por proximidade. No DBSCAN, uma ocorrência central precisa ter o mínimo escolhido dentro do raio, incluindo ela própria. Vizinhanças centrais conectadas formam polos e incorporam pontos de borda. Um ponto de borda compartilhado é atribuído ao primeiro polo na ordem de coordenadas. O raio não limita a extensão total: polos podem se alongar, unir curvas ou vias paralelas próximas. Não usamos distância percorrida pela rodovia.</p><p>Acidentes: quantidade decrescente, depois mortos, graves e coordenadas. Severidade e mortes: mortos decrescentes, depois graves, acidentes e coordenadas. Feridos graves: graves decrescentes, depois mortos, acidentes e coordenadas. Mortes e graves têm listas independentes; somente polos com vítimas do respectivo indicador entram. Cada lista tem no máximo cinco posições. A = acidentes, S = combinado, M = mortes, G = graves. O seletor de destaques determina qual ranking acompanha A no mapa.</p><p>O km do banco é apenas um rótulo indicativo; não são segmentos medidos de 1 km. A BR restringe a amostra pelo filtro, mas não separa grupos. Coordenadas ocultas permanecem no banco e no total filtrado, fora dos polos e rankings. Pontos sem densidade suficiente também ficam fora dos rankings. São frequências, não taxas de risco por tráfego.</p><p>A animação respeita BR, causa, tipo, classificação e severidade. Cada balanço acumula janeiro a dezembro do próprio ano; a Síntese reúne todo o período. Nos balanços e na Síntese, o mapa exibe apenas os destaques escolhidos. O histórico mantém fixo o grupo selecionado e distribui suas ocorrências por ano, respeitando o recorte atual. Para comparar todos os anos, use o modo estático sem filtro de ano ou a Síntese.</p></details>
             </div>
           </aside>
@@ -959,6 +959,8 @@
     const ROADS = [...new Set(DATA.rows.map(row => row[R.BR]).filter(Number.isFinite))].sort((a, b) => a - b);
 
     const numberBR = new Intl.NumberFormat("pt-BR");
+    // "1 morto", "2 mortos": concordância de número nas contagens exibidas
+    const plural = (n, um, varios) => `${numberBR.format(Number(n) || 0)} ${Number(n) === 1 ? um : varios}`;
     const percentBR = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 });
 
     const state = {
@@ -1228,7 +1230,7 @@
         keyboard: true,
         riseOnHover: true,
         zIndexOffset: 2000,
-        title: `Polo ${rank > 0 ? `#${rank}` : "selecionado"}${point.projected ? " · alinhado ao eixo rodoviário" : " · centróide"}`
+        title: `Polo ${rank > 0 ? `#${rank}` : "selecionado"}${point.projected ? " · alinhado ao eixo rodoviário" : " · centroide"}`
       }).addTo(state.map);
       const popup = document.createElement("div");
       popup.className = "centroid-popup";
@@ -1564,7 +1566,7 @@
 
     function appendPositionDetails(container, group) {
       const point=mapPosition(group);
-      container.append(makeNode("div","",`Centróide calculado: ${group.lat.toFixed(6)}, ${group.lon.toFixed(6)}`),makeNode("div","",`${point.projected ? "Posição no eixo" : "Posição no mapa"}: ${point.lat.toFixed(6)}, ${point.lon.toFixed(6)}`));
+      container.append(makeNode("div","",`Centroide calculado: ${group.lat.toFixed(6)}, ${group.lon.toFixed(6)}`),makeNode("div","",`${point.projected ? "Posição no eixo" : "Posição no mapa"}: ${point.lat.toFixed(6)}, ${point.lon.toFixed(6)}`));
     }
 
     function geographicTolerance() {
@@ -1668,7 +1670,7 @@
         const point=mapPosition(group);
         link.href=streetViewUrl(point.lat,point.lon); link.target="_blank"; link.rel="noopener noreferrer";
         link.setAttribute("aria-label",`${rankCode}, ${index+1}º por ${severe ? "severidade" : "acidentes"}, referência ${referenceLabel(group)}: abrir Street View em nova aba`);
-        main.append(link,makeNode("span","km-meta",`Centróide ${group.lat.toFixed(5)}, ${group.lon.toFixed(5)}`));
+        main.append(link,makeNode("span","km-meta",`Centroide ${group.lat.toFixed(5)}, ${group.lon.toFixed(5)}`));
         // Only accident counts use a single bar. A sum of deaths + injuries would suggest a different severity order.
         if (!severe) {
           const bar = makeNode("div","km-bar"), fill = makeNode("i");
@@ -1677,7 +1679,7 @@
         }
         const numbers = makeNode("div","km-numbers");
         numbers.append(makeNode("strong","",severe ? `${group.deaths} M · ${group.serious} G` : numberBR.format(group.count)));
-        numbers.append(makeNode("small","",severe ? `${numberBR.format(group.count)} acidentes` : `${group.deaths} mortos · ${group.serious} graves`));
+        numbers.append(makeNode("small","",severe ? `${plural(group.count, "acidente", "acidentes")}` : `${plural(group.deaths, "morto", "mortos")} · ${plural(group.serious, "grave", "graves")}`));
         const locate=makeNode("button","locate-km","Localizar no mapa"); locate.type="button"; locate.addEventListener("click",()=>focusRankedGroup(group)); numbers.append(locate);
         row.append(position,main,numbers); fragment.append(row);
       });
@@ -1687,7 +1689,7 @@
     function spatialPopup(group) {
       const popup=makeNode("div","km-popup");
       const point=mapPosition(group);
-      popup.append(makeNode("strong","",`${group.label} · ${referenceLabel(group)}`),makeNode("div","",`${group.count} acidentes · ${group.deaths} mortos · ${group.serious} graves`));
+      popup.append(makeNode("strong","",`${group.label} · ${referenceLabel(group)}`),makeNode("div","",`${plural(group.count, "acidente", "acidentes")} · ${plural(group.deaths, "morto", "mortos")} · ${plural(group.serious, "grave", "graves")}`));
       appendPositionDetails(popup,group);
       popup.append(makeNode("small","","BR/km apenas indicativos; grupo calculado pelas coordenadas."));
       const link=makeNode("a","","Abrir imagem Street View ↗"); link.href=streetViewUrl(point.lat,point.lon); link.target="_blank"; link.rel="noopener noreferrer"; popup.append(link);
@@ -1748,7 +1750,7 @@
         const leader=L.polyline([base,base],{color:"#ffffff",weight:2,opacity:.95,interactive:false});
         const anchor=L.circleMarker(base,{radius:3.5,color:"#ffffff",weight:1.5,fillColor:"#123047",fillOpacity:1,interactive:false});
         state.layers.push(leader,anchor);
-        const marker=L.marker(base,{icon,keyboard:true,title:`${badge} · ${referenceLabel(group)}${point.projected ? " · eixo rodoviário" : " · centróide"}`,zIndexOffset:1000}).addTo(state.map);
+        const marker=L.marker(base,{icon,keyboard:true,title:`${badge} · ${referenceLabel(group)}${point.projected ? " · eixo rodoviário" : " · centroide"}`,zIndexOffset:1000}).addTo(state.map);
         rankedEntries.push({base,marker,leader,anchor});
         marker.bindPopup(spatialPopup(group),{maxWidth:310});
         marker.bindTooltip(makeNode("div","",`${group.label} · ${referenceLabel(group)} (referência)`));
@@ -1763,7 +1765,7 @@
       rows.forEach(row=>{
         const color=row[R.DEATHS]>0 ? "#ff6174" : row[R.SERIOUS]>0 ? "#b898f1" : "#ffe3a1";
         const dot=L.circleMarker([row[R.LAT],row[R.LON]],{radius:3,color,weight:0,fillColor:color,fillOpacity:.55,interactive:true}).addTo(state.map);
-        const text=makeNode("div","",`${row[R.DATE].split("-").reverse().join("/")} · ${row[R.DEATHS]} mortos · ${row[R.SERIOUS]} graves`);
+        const text=makeNode("div","",`${row[R.DATE].split("-").reverse().join("/")} · ${plural(row[R.DEATHS], "morto", "mortos")} · ${plural(row[R.SERIOUS], "grave", "graves")}`);
         dot.bindTooltip(text); state.layers.push(dot);
       });
     }
@@ -1783,7 +1785,7 @@
         const circle=L.circleMarker([point.lat,point.lon],cumulativeCircleStyle(group.count,belowMinimum)).addTo(state.map);
         circle.bindTooltip(numberBR.format(group.count),{permanent:true,direction:"center",className:`cluster-count-label${topGroups.has(group) ? "" : " secondary"}`,opacity:1});
         const popup=makeNode("div","km-popup");
-        popup.append(makeNode("strong","",`${numberBR.format(group.count)} acidentes acumulados`),makeNode("div","",title),makeNode("div","",`${group.rows.reduce((s,r)=>s+r[R.DEATHS],0)} mortos · ${group.rows.reduce((s,r)=>s+r[R.SERIOUS],0)} feridos graves`));
+        popup.append(makeNode("strong","",`${plural(group.count, "acidente acumulado", "acidentes acumulados")}`),makeNode("div","",title),makeNode("div","",`${plural(group.rows.reduce((s,r)=>s+r[R.DEATHS],0), "morto", "mortos")} · ${plural(group.rows.reduce((s,r)=>s+r[R.SERIOUS],0), "ferido grave", "feridos graves")}`));
         appendPositionDetails(popup,group);
         popup.append(makeNode("small","",belowMinimum ? `Abaixo do mínimo de ${spatialMinimum()} ocorrências para os rankings.` : "Contagem de todos os meses transcorridos no período exibido."));
         circle.bindPopup(popup,{maxWidth:310}); circle.on("click",()=>pauseTimeline()); state.layers.push(circle);
@@ -2017,7 +2019,7 @@
       groups.forEach((g,i)=>{
         const article=makeNode("article","km-row severe"), main=makeNode("div","km-main"), point=mapPosition(g);
         const link=makeNode("a","",`${prefix}${i+1} · ${referenceLabel(g)} ↗`);link.href=streetViewUrl(point.lat,point.lon);link.target="_blank";link.rel="noopener noreferrer";
-        main.append(link,makeNode("span","km-meta",`${g.count} acidentes · ${g.deaths} mortos · ${g.serious} graves`));
+        main.append(link,makeNode("span","km-meta",`${plural(g.count, "acidente", "acidentes")} · ${plural(g.deaths, "morto", "mortos")} · ${plural(g.serious, "grave", "graves")}`));
         const button=makeNode("button","locate-km","Localizar e ver histórico");button.type="button";button.addEventListener("click",()=>focusRankedGroup({...g,label:`${prefix}${i+1}`}));main.append(button);
         article.append(makeNode("div","km-position",String(i+1).padStart(2,"0")),main,makeNode("strong","",numberBR.format(g[metric])));fragment.append(article);
       });$(id).replaceChildren(fragment);
@@ -2042,13 +2044,13 @@
     }
     function renderPriority(ranks) {
       const stats=priorityStats(ranks.all,analysisYears());
-      setText("priorityContext",`${methodDescription()} · ${ranks.all.length} polos. Frequência alta: ≥ ${numberBR.format(stats.frequency)} acidentes. Severidade alta: ≥ ${numberBR.format(stats.victims)} vítimas (mortos + graves), sempre maior que zero. Persistente: mínimo de ocorrências em pelo menos metade dos anos. Clique para localizar e consultar o histórico.`);
+      setText("priorityContext",`${methodDescription()} · ${ranks.all.length} polos. Frequência alta: ≥ ${plural(Math.ceil(stats.frequency), "acidente", "acidentes")}. Severidade alta: ≥ ${numberBR.format(Math.ceil(stats.victims))} vítimas (mortos + graves), sempre maior que zero. Persistente: mínimo de ocorrências em pelo menos metade dos anos. Clique para localizar e consultar o histórico.`);
       const grid=$("priorityMatrix");grid.replaceChildren();
       [[true,true,"Frequência e severidade altas"],[false,true,"Severidade alta · frequência menor"],[true,false,"Frequência alta · severidade menor"],[false,false,"Frequência e severidade menores"]].forEach(([f,v,title])=>{
         const cell=makeNode("div",`priority-cell ${v ? "high-load" : ""}`),items=stats.items.filter(g=>g.highFrequency===f && g.highVictims===v).sort((a,b)=>Number(b.persistent)-Number(a.persistent) || b.deaths-a.deaths || b.serious-a.serious || b.count-a.count);
         cell.append(makeNode("h3","",`${title} · ${items.length}`));
         if(!items.length)cell.append(makeNode("p","field-note","Nenhum polo neste quadrante."));
-        items.forEach(g=>{const button=makeNode("button","priority-item",`${referenceLabel(g)}${g.persistent ? " · Persistente" : ""}\n${g.count} acidentes · ${g.deaths} mortos · ${g.serious} graves`);button.type="button";button.addEventListener("click",()=>{if(experience.mode==="poles")selectCluster(g);focusRankedGroup(g);});cell.append(button);});grid.append(cell);
+        items.forEach(g=>{const button=makeNode("button","priority-item",`${referenceLabel(g)}${g.persistent ? " · Persistente" : ""}\n${plural(g.count, "acidente", "acidentes")} · ${plural(g.deaths, "morto", "mortos")} · ${plural(g.serious, "grave", "graves")}`);button.type="button";button.addEventListener("click",()=>{if(experience.mode==="poles")selectCluster(g);focusRankedGroup(g);});cell.append(button);});grid.append(cell);
       });
     }
     const originalExperienceRows=renderExperienceRows;
